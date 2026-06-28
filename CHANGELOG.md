@@ -27,4 +27,4 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI (fmt / clippy `-D warnings` / test / build) and Dependabot for cargo
   and GitHub Actions.
 
-[0.1.0]: https://github.com/protosphinx/floodwall/releases/tag/v0.1.0
+[0.1.0]: https://github.com/erphq/floodwall/releases/tag/v0.1.0
