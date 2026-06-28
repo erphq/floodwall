@@ -1,0 +1,22 @@
+[package]
+name = "cofferdam"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+license = "MIT"
+description = "A control plane for high-volume, agent-driven DevOps - admission control, a policy verification gate, and a tamper-evident decision ledger."
+repository = "https://github.com/protosphinx/cofferdam"
+readme = "README.md"
+keywords = ["devops", "control-plane", "agents", "admission-control", "policy"]
+categories = ["concurrency", "command-line-utilities"]
+
+[dependencies]
+
+[dev-dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[[bin]]
+name = "cofferdam"
+path = "src/bin/cofferdam.rs"
