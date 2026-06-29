@@ -286,8 +286,22 @@ function Roadmap() {
 }
 
 function FooterScene() {
+  const canUseVideo = useHeroVideoEligibility();
+
   return (
     <footer className="sf-footer">
+      {canUseVideo ? (
+        <video
+          className="footer-video"
+          src={VIDEO_URL}
+          muted
+          playsInline
+          loop
+          autoPlay
+          preload="metadata"
+          aria-hidden="true"
+        />
+      ) : null}
       <div className="footer-fog" aria-hidden="true" />
       <div className="footer-lights" aria-hidden="true" />
       <svg className="footer-bridge" viewBox="0 0 1400 620" preserveAspectRatio="none" aria-hidden="true">

@@ -671,8 +671,23 @@ main {
   position: relative;
   min-height: 820px;
   overflow: hidden;
-  background: linear-gradient(180deg, #f1f7fb 0%, #d7e8f1 28%, #7fb9cf 100%);
+  background:
+    radial-gradient(ellipse at 72% 72%, rgba(232, 109, 78, 0.26), transparent 32%),
+    linear-gradient(180deg, #f7fbff 0%, #d7e8f1 30%, #7fb9cf 100%);
   isolation: isolate;
+}
+
+.footer-video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 58%;
+  opacity: 0.92;
+  filter: saturate(1.05) contrast(1.04) brightness(1.08);
+  pointer-events: none;
 }
 
 .sf-footer::before,
@@ -686,12 +701,12 @@ main {
 
 .sf-footer::before {
   background:
-    linear-gradient(180deg, #f1f7fb 0%, rgba(241, 247, 251, 0.72) 18%, rgba(241, 247, 251, 0.12) 44%, rgba(22, 58, 72, 0.3) 100%),
-    linear-gradient(90deg, rgba(247, 251, 255, 0.82), rgba(247, 251, 255, 0.22) 54%, rgba(22, 58, 72, 0.28));
+    linear-gradient(180deg, rgba(247, 251, 255, 0.96) 0%, rgba(247, 251, 255, 0.7) 30%, rgba(247, 251, 255, 0.18) 58%, rgba(31, 82, 96, 0.32) 100%),
+    linear-gradient(90deg, rgba(247, 251, 255, 0.94), rgba(247, 251, 255, 0.52) 42%, rgba(247, 251, 255, 0.08) 68%, rgba(12, 52, 67, 0.28));
 }
 
 .sf-footer::after {
-  opacity: 0.18;
+  opacity: 0.06;
   background-image:
     linear-gradient(rgba(8, 11, 13, 0.12) 1px, transparent 1px),
     linear-gradient(90deg, rgba(8, 11, 13, 0.1) 1px, transparent 1px);
@@ -704,19 +719,20 @@ main {
   z-index: 1;
   left: -18%;
   right: -18%;
-  top: 16%;
-  height: 240px;
+  top: 8%;
+  height: 300px;
   background:
     radial-gradient(ellipse at 20% 48%, rgba(255, 255, 255, 0.8), transparent 44%),
     radial-gradient(ellipse at 56% 58%, rgba(255, 255, 255, 0.54), transparent 48%),
     radial-gradient(ellipse at 84% 46%, rgba(184, 227, 244, 0.5), transparent 38%);
+  opacity: 0.78;
   animation: fog-drift 44s ease-in-out infinite alternate;
 }
 
 .footer-lights {
   z-index: 1;
   height: 240px;
-  opacity: 0.5;
+  opacity: 0.24;
 }
 
 .footer-bridge {
@@ -726,7 +742,8 @@ main {
   bottom: -5%;
   width: 112%;
   height: 58%;
-  color: rgba(232, 109, 78, 0.58);
+  color: rgba(232, 109, 78, 0.28);
+  opacity: 0.58;
   animation: bridge-glow 9s ease-in-out infinite;
 }
 
@@ -754,7 +771,8 @@ main {
   bottom: 18%;
   width: 108%;
   height: 34%;
-  color: rgba(8, 11, 13, 0.28);
+  color: rgba(8, 11, 13, 0.16);
+  opacity: 0.5;
 }
 
 .footer-skyline path {
