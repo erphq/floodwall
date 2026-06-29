@@ -21,3 +21,16 @@ jobs:
         run: cargo test --all
       - name: build
         run: cargo build --release
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: install
+        run: npm --prefix site ci
+      - name: check
+        run: npm --prefix site run check

@@ -1,4 +1,7 @@
 /target
+/site/node_modules
+/site/dist
 **/*.rs.bk
 Cargo.lock
 .DS_Store
+npm-debug.log*
