@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>floodwall</title>
+    <meta
+      name="description"
+      content="A Rust control plane for agent-driven infrastructure changes: admission control, policy gates, and a tamper-evident decision ledger."
+    >
+    <meta property="og:title" content="floodwall">
+    <meta
+      property="og:description"
+      content="Govern high-volume agent-driven DevOps with admission control, policy gates, and a tamper-evident decision ledger."
+    >
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://floodwall.ai/">
+    <meta name="theme-color" content="#14110f">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header" aria-label="Primary">
+      <a class="brand" href="#top" aria-label="floodwall home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>floodwall</span>
+      </a>
+      <nav class="site-nav" aria-label="Site">
+        <a href="#model">Model</a>
+        <a href="#crate">Crate</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="https://github.com/erphq/floodwall">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <canvas id="wall-canvas" class="wall-canvas" aria-hidden="true"></canvas>
+        <div class="hero-shade" aria-hidden="true"></div>
+        <div class="hero-content">
+          <p class="eyebrow">Agent-driven DevOps control plane</p>
+          <h1 id="hero-title">floodwall</h1>
+          <p class="hero-copy">
+            A zero-dependency Rust crate that meters agent-generated infrastructure
+            changes, verifies each intent at a policy gate, and records every
+            verdict in a tamper-evident ledger.
+          </p>
+          <div class="hero-actions" aria-label="Primary actions">
+            <a class="button primary" href="https://github.com/erphq/floodwall">View on GitHub</a>
+            <a class="button secondary" href="#crate">Read the crate surface</a>
+          </div>
+        </div>
+        <aside class="hero-panel" aria-label="Current crate state">
+          <div>
+            <span class="metric-value">0.1</span>
+            <span class="metric-label">shipped</span>
+          </div>
+          <div>
+            <span class="metric-value">0</span>
+            <span class="metric-label">dependencies</span>
+          </div>
+          <div>
+            <span class="metric-value">21</span>
+            <span class="metric-label">tests</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section intro" id="model" aria-labelledby="model-title">
+        <div class="section-heading">
+          <p class="eyebrow">The wall</p>
+          <h2 id="model-title">Agents submit intents. Production gets decisions.</h2>
+        </div>
+        <div class="pipeline-grid">
+          <article class="pipeline-card">
+            <span class="step-number">01</span>
+            <h3>Admission</h3>
+            <p>
+              A per-agent token bucket and bounded priority queue keep one runaway
+              loop from starving the rest of the fleet.
+            </p>
+          </article>
+          <article class="pipeline-card">
+            <span class="step-number">02</span>
+            <h3>Gate</h3>
+            <p>
+              A deny-overrides policy stack evaluates every intent, so one hard
+              rejection blocks the change.
+            </p>
+          </article>
+          <article class="pipeline-card">
+            <span class="step-number">03</span>
+            <h3>Ledger</h3>
+            <p>
+              Every admit, defer, and reject lands in an append-only hash chain
+              that fails verification if history is edited.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section crate-section" id="crate" aria-labelledby="crate-title">
+        <div class="crate-copy">
+          <p class="eyebrow">Crate surface</p>
+          <h2 id="crate-title">Small enough to read. Structured enough to extend.</h2>
+          <p>
+            floodwall models a change as an attributed intent with an action,
+            priority, and blast radius. The caller supplies logical time, so
+            admission control stays deterministic and testable.
+          </p>
+          <dl class="surface-list">
+            <div>
+              <dt>Intent</dt>
+              <dd>Apply, scale, or destroy a resource with explicit blast radius.</dd>
+            </div>
+            <div>
+              <dt>Policy</dt>
+              <dd>Pure Rust trait returning admit, defer, or reject.</dd>
+            </div>
+            <div>
+              <dt>Floodwall</dt>
+              <dd>End-to-end submit, gate, and record flow.</dd>
+            </div>
+          </dl>
+        </div>
+        <pre class="code-sample" aria-label="Rust example"><code>use floodwall::{Admission, Floodwall, Gate, RateLimit};
+use floodwall::policy::{BlastNeedsPriority, NoGlobalDestroy};
+
+let admission = Admission::new(1024, RateLimit::new(8.0, 1.0));
+let gate = Gate::new()
+    .with(NoGlobalDestroy)
+    .with(BlastNeedsPriority);
+
+let mut plane = Floodwall::new(admission, gate);
+let decision = plane.tick();
+
+assert!(plane.ledger().verify());</code></pre>
+      </section>
+
+      <section class="section roadmap" id="roadmap" aria-labelledby="roadmap-title">
+        <div class="section-heading">
+          <p class="eyebrow">Roadmap</p>
+          <h2 id="roadmap-title">From wall to scheduler to replayable control plane.</h2>
+        </div>
+        <div class="roadmap-list">
+          <article>
+            <span>v0.1</span>
+            <h3>The wall</h3>
+            <p>Intent model, admission control, policy gate, hash-chained ledger, demo binary.</p>
+          </article>
+          <article>
+            <span>v0.2</span>
+            <h3>Scheduler</h3>
+            <p>Serialize wide-blast and same-resource intents while narrow independent work proceeds.</p>
+          </article>
+          <article>
+            <span>v0.3</span>
+            <h3>Trustworthy ledger</h3>
+            <p>SHA-256 chain, signed records, and Merkle checkpoints for suffix audits.</p>
+          </article>
+          <article>
+            <span>v0.4</span>
+            <h3>Persistence and replay</h3>
+            <p>Durable append-only state and replay that reconstructs the live decisions.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>floodwall is MIT licensed and built in Rust.</p>
+      <div>
+        <a href="https://github.com/erphq/floodwall">Repository</a>
+        <a href="https://github.com/erphq/floodwall/blob/main/GOALS.md">Goals</a>
+        <a href="https://github.com/erphq/floodwall/blob/main/STATUS.md">Status</a>
+      </div>
+    </footer>
+
+    <script src="site.js" defer></script>
+  </body>
+</html>
