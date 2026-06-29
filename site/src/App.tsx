@@ -164,7 +164,13 @@ function Hero() {
       <div className="hero-content">
         <p className="hero-kicker">San Francisco / agent ops / production gate</p>
         <h1 id="hero-title">
-          When <em>agents flood</em> production, <em>hold the line.</em>
+          <span>
+            When <em>agents flood</em>
+          </span>
+          {" "}
+          <span>
+            production, <em>hold the line.</em>
+          </span>
         </h1>
         <p>
           Floodwall meters agent-generated infrastructure changes, verifies each intent at a policy
