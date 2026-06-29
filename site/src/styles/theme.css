@@ -672,7 +672,9 @@ main {
   min-height: 820px;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 72% 72%, rgba(232, 109, 78, 0.26), transparent 32%),
+    radial-gradient(ellipse at 72% 72%, rgba(232, 109, 78, 0.2), transparent 34%),
+    linear-gradient(180deg, rgba(247, 251, 255, 0.94) 0%, rgba(215, 232, 241, 0.68) 30%, rgba(127, 185, 207, 0.34) 100%),
+    url("/footer-sf-poster.jpg") center 58% / cover no-repeat,
     linear-gradient(180deg, #f7fbff 0%, #d7e8f1 30%, #7fb9cf 100%);
   isolation: isolate;
 }

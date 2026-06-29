@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const VIDEO_URL = "/hero-sf.mp4";
+const FOOTER_POSTER_URL = "/footer-sf-poster.jpg";
 
 const repoUrl = "https://github.com/erphq/floodwall";
 
@@ -294,6 +295,7 @@ function FooterScene() {
         <video
           className="footer-video"
           src={VIDEO_URL}
+          poster={FOOTER_POSTER_URL}
           muted
           playsInline
           loop
