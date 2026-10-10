@@ -66,6 +66,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Breaking:** signed intents and records (FW-302). Agents sign intents
+  with Ed25519 (`Intent::signed`); `Intent::digest` is SHA-256 over a
+  documented encoding of every field but the signature, and `Priority`
+  and `BlastRadius` now have explicit discriminants because they are part
+  of it. `Floodwall::with_keyring` requires every intent to be signed by
+  its agent's key on a `Keyring`: `submit` refuses unsigned, unknown and
+  forged intents with the new `Rejected::Unsigned`, `UnknownAgent` and
+  `BadSignature`, before the duplicate check and the rate limit; intents
+  that reached the queue another way are checked when ruled on (breakdown
+  entry `agent-signature`). A ledger record about an intent stores the
+  intent itself, signature and all (`Record::intent`, with
+  `intent_digest()` and `signature()`), covered by the record digest
+  (record encoding now `v2`). `Ledger::append_intent(intent, verdict,
+  reason, policies)` takes the record's intent id, agent and action summary
+  from the intent, `Ledger::verify` rejects a record that disagrees with
+  its intent, and `Ledger::verify_signatures` checks every record's
+  signature of its recomputed intent digest against a keyring.
+  `Keyring::with_retired` keeps rotated-out keys for audits only.
+  Ed25519 (`floodwall::ed25519`: `SigningKey`, `VerifyingKey`,
+  `Signature`) and SHA-512 (`floodwall::sha512`) are from scratch;
+  `VerifyingKey::from_bytes` refuses weak, small-order keys
+  (`InvalidKey::Weak`). Without a keyring, signatures are optional and
+  unchecked, as before.
 - **Breaking:** the ledger is a SHA-256 hash chain instead of FNV-1a
   (FW-301). `Record::prev`, `Record::digest` and `Ledger::head()` are a
   32-byte `ledger::Digest` (shown as hex) instead of a `u64`; the genesis

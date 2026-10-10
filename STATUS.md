@@ -46,10 +46,16 @@ GitHub Pages) describes the scheduler and hold queue.
 
 ## Known gaps
 
+- A retired agent key (kept for audits after a rotation) verifies any of
+  its agent's records, because records do not yet carry the time they were
+  written (FW-404).
+
 - An intent the caller never completes holds its place forever (FW-906).
 - The `by` in a release or expiry is free text, not a verified identity
   (FW-907).
 - Priority is strict, so `Bulk` work can starve under a constant stream of
   higher-priority intents (FW-908).
-- Ledger records are not yet signed (FW-302), so whoever holds the ledger
-  can rewrite it consistently and publish a new head.
+- Agent signatures prove who asked for each change, but the plane's own
+  verdicts are not signed yet: whoever holds the ledger can still rewrite
+  verdicts consistently and publish a new head. Having the plane sign its
+  Merkle checkpoints (FW-303) is the natural way to close that gap.
