@@ -50,9 +50,11 @@
 
 use std::fmt;
 
-use crate::ed25519::Signature;
+use crate::checkpoint::Checkpoint;
+use crate::ed25519::{Signature, SigningKey, VerifyingKey};
 use crate::intent::Intent;
 use crate::keyring::Keyring;
+use crate::merkle::{self, Frontier};
 use crate::sha256::Sha256;
 
 /// A SHA-256 digest: one record's fingerprint, or the head of the chain.
@@ -239,6 +241,13 @@ impl std::error::Error for SignatureError {}
 pub struct Ledger {
     records: Vec<Record>,
     head: Digest,
+    /// The Merkle frontier over every record digest so far.
+    frontier: Frontier,
+    checkpoints: Vec<Checkpoint>,
+    /// Cut a checkpoint every this many records.
+    checkpoint_every: Option<u64>,
+    /// The plane's key, to sign checkpoints with.
+    signer: Option<SigningKey>,
 }
 
 impl Default for Ledger {
@@ -253,7 +262,35 @@ impl Ledger {
         Self {
             records: Vec::new(),
             head: Digest::GENESIS,
+            frontier: Frontier::new(),
+            checkpoints: Vec::new(),
+            checkpoint_every: None,
+            signer: None,
         }
+    }
+
+    /// Cut a [`Checkpoint`] automatically every `every` records.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `every` is 0.
+    pub fn with_checkpoints(mut self, every: u64) -> Self {
+        assert!(every > 0, "a checkpoint interval must be at least 1 record");
+        self.checkpoint_every = Some(every);
+        self
+    }
+
+    /// Sign every checkpoint cut from now on with the plane's `key`, so an
+    /// auditor holding the public key can trust a checkpoint whoever hands
+    /// it over.
+    pub fn with_signer(mut self, key: SigningKey) -> Self {
+        self.signer = Some(key);
+        self
+    }
+
+    /// The public key checkpoints are signed with, if any.
+    pub fn signer(&self) -> Option<VerifyingKey> {
+        self.signer.as_ref().map(SigningKey::verifying_key)
     }
 
     /// Append a decision with no evidence and return the record just written.
@@ -320,17 +357,98 @@ impl Ledger {
         };
         record.digest = record.compute_digest();
         self.head = record.digest;
+        self.frontier.push(&record.digest);
         self.records.push(record);
+        if let Some(every) = self.checkpoint_every {
+            if (self.records.len() as u64).is_multiple_of(every) {
+                self.cut_checkpoint();
+            }
+        }
         self.records.last().expect("a record was just pushed")
+    }
+
+    fn cut_checkpoint(&mut self) {
+        let mut checkpoint = Checkpoint {
+            size: self.records.len() as u64,
+            head: self.head,
+            root: self.frontier.root(),
+            frontier: self.frontier.peaks().to_vec(),
+            signature: None,
+        };
+        if let Some(key) = &self.signer {
+            checkpoint.signature = Some(key.sign(checkpoint.digest().as_bytes()));
+        }
+        self.checkpoints.push(checkpoint);
+    }
+
+    /// A checkpoint of the ledger as it is now, cutting one unless the
+    /// latest checkpoint already covers every record.
+    pub fn checkpoint(&mut self) -> Checkpoint {
+        let size = self.records.len() as u64;
+        if self.checkpoints.last().is_none_or(|c| c.size != size) {
+            self.cut_checkpoint();
+        }
+        self.checkpoints.last().expect("just ensured").clone()
+    }
+
+    /// Every checkpoint cut so far, oldest first.
+    pub fn checkpoints(&self) -> &[Checkpoint] {
+        &self.checkpoints
+    }
+
+    /// Tests elsewhere in the crate tamper with stored checkpoints.
+    #[cfg(test)]
+    pub(crate) fn checkpoints_mut(&mut self) -> &mut Vec<Checkpoint> {
+        &mut self.checkpoints
+    }
+
+    /// Check every checkpoint's signature against the plane's `key`.
+    /// Returns how many were checked, or the position of the first that is
+    /// unsigned or signed by another key.
+    pub fn verify_checkpoint_signatures(&self, key: &VerifyingKey) -> Result<usize, usize> {
+        match self.checkpoints.iter().position(|c| !c.is_signed_by(key)) {
+            Some(i) => Err(i),
+            None => Ok(self.checkpoints.len()),
+        }
+    }
+
+    /// The records after `checkpoint`: what an auditor who trusts it needs
+    /// to check the rest of the ledger with
+    /// [`audit_suffix`](crate::checkpoint::audit_suffix). `None` if the
+    /// checkpoint covers more records than the ledger has.
+    pub fn records_after(&self, checkpoint: &Checkpoint) -> Option<&[Record]> {
+        self.records.get(usize::try_from(checkpoint.size).ok()?..)
+    }
+
+    /// An inclusion proof that record `seq` is in the Merkle tree over the
+    /// first `size` records (the tree a checkpoint of that size commits
+    /// to). Check it with [`merkle::verify_inclusion`] against the record's
+    /// digest and the checkpoint's root. `None` unless `seq < size` and
+    /// `size` is at most the number of records.
+    pub fn prove_inclusion(&self, seq: u64, size: u64) -> Option<Vec<Digest>> {
+        let records = self.records.get(..usize::try_from(size).ok()?)?;
+        let leaves: Vec<Digest> = records.iter().map(|r| r.digest).collect();
+        merkle::inclusion_proof(&leaves, usize::try_from(seq).ok()?)
     }
 
     /// Recompute the chain from genesis and confirm nothing has been
     /// altered: every record is at its position, links to the one before
     /// it, agrees with the intent it holds, and has the digest its contents
-    /// give, and the last digest is the head.
+    /// give, and the last digest is the head. Every checkpoint must match
+    /// the records it covers, in order. Checkpoint signatures are checked
+    /// separately, with [`Ledger::verify_checkpoint_signatures`].
     pub fn verify(&self) -> bool {
         let mut prev = Digest::GENESIS;
-        for (i, r) in self.records.iter().enumerate() {
+        let mut frontier = Frontier::new();
+        let mut checkpoints = self.checkpoints.iter().peekable();
+        for i in 0..=self.records.len() {
+            // Every checkpoint at this size must match the records so far.
+            while let Some(c) = checkpoints.next_if(|c| c.size == i as u64) {
+                if c.head != prev || c.root != frontier.root() || c.frontier != frontier.peaks() {
+                    return false;
+                }
+            }
+            let Some(r) = self.records.get(i) else { break };
             if r.seq != i as u64
                 || r.prev != prev
                 || !r.agrees_with_intent()
@@ -338,9 +456,12 @@ impl Ledger {
             {
                 return false;
             }
+            frontier.push(&r.digest);
             prev = r.digest;
         }
-        prev == self.head
+        // Checkpoints must come in order and none may outrun the records.
+        let in_order = self.checkpoints.windows(2).all(|w| w[0].size < w[1].size);
+        checkpoints.next().is_none() && in_order && prev == self.head
     }
 
     /// Check every record's authorship against the agents' public keys:
@@ -462,7 +583,8 @@ mod tests {
         edited[0].evidence.reason = Some("approved".into());
         assert!(!Ledger {
             records: edited,
-            head: l.head
+            head: l.head,
+            ..Ledger::new()
         }
         .verify());
 
@@ -470,7 +592,8 @@ mod tests {
         edited[0].evidence.policies[0].1 = "admit".into();
         assert!(!Ledger {
             records: edited,
-            head: l.head
+            head: l.head,
+            ..Ledger::new()
         }
         .verify());
 
@@ -478,7 +601,8 @@ mod tests {
         edited[0].evidence.action = "scale web to 3".into();
         assert!(!Ledger {
             records: edited,
-            head: l.head
+            head: l.head,
+            ..Ledger::new()
         }
         .verify());
     }
@@ -678,6 +802,7 @@ mod tests {
             Ledger {
                 records,
                 head: prev,
+                ..Ledger::new()
             }
         };
         let bad = |l: &Ledger| {
@@ -731,6 +856,7 @@ mod tests {
         let forged = Ledger {
             records,
             head: l.head,
+            ..Ledger::new()
         };
         assert!(!forged.verify());
     }
@@ -774,6 +900,7 @@ mod tests {
             let forged = Ledger {
                 head: records[0].digest,
                 records,
+                ..Ledger::new()
             };
             assert!(!forged.records[0].agrees_with_intent());
             assert!(!forged.verify());
@@ -857,6 +984,7 @@ mod tests {
             let forged = Ledger {
                 records,
                 head: l.head,
+                ..Ledger::new()
             };
             assert!(!forged.verify(), "editing {what} went unnoticed");
         }
@@ -878,6 +1006,7 @@ mod tests {
         let forged = Ledger {
             records,
             head: l.head,
+            ..Ledger::new()
         };
         assert!(!forged.verify());
     }
@@ -895,6 +1024,7 @@ mod tests {
         let forged = Ledger {
             records,
             head: l.head,
+            ..Ledger::new()
         };
         assert_eq!(forged.records[1].compute_digest(), forged.records[1].digest);
         assert_eq!(forged.records.last().unwrap().digest, forged.head);
@@ -908,14 +1038,16 @@ mod tests {
         truncated.pop();
         assert!(!Ledger {
             records: truncated,
-            head: l.head
+            head: l.head,
+            ..Ledger::new()
         }
         .verify());
         let mut swapped = l.records.clone();
         swapped.swap(1, 2);
         assert!(!Ledger {
             records: swapped,
-            head: l.head
+            head: l.head,
+            ..Ledger::new()
         }
         .verify());
     }

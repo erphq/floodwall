@@ -103,6 +103,19 @@ impl Keyring {
             .chain(self.retired.get(agent).into_iter().flatten())
     }
 
+    /// Every agent with a current key, and that key, ordered by agent.
+    pub fn iter(&self) -> impl Iterator<Item = (&AgentId, &VerifyingKey)> {
+        self.keys.iter()
+    }
+
+    /// Every agent with retired keys, and those keys in the order they were
+    /// added, ordered by agent.
+    pub fn retired(&self) -> impl Iterator<Item = (&AgentId, &[VerifyingKey])> {
+        self.retired
+            .iter()
+            .map(|(agent, keys)| (agent, keys.as_slice()))
+    }
+
     /// How many agents have a current key.
     pub fn len(&self) -> usize {
         self.keys.len()

@@ -7,15 +7,25 @@
 //! failing), and the tamper-evident ledger at the end. Every agent signs
 //! its intents, and the chaos monkey now and then forges one in another
 //! agent's name. Deterministic and dependency-free.
+//!
+//! `floodwall --export DIR` also writes the ledger for auditors: the whole
+//! of it (`ledger.jsonl`), the part after the second-to-last checkpoint
+//! (`ledger-suffix.jsonl`), and the public keys to check it with
+//! (`keys.json`). `node tools/verify-ledger.mjs` verifies them.
 
 use std::collections::{BTreeMap, HashSet};
+use std::fs::{self, File};
+use std::io::{BufWriter, Write};
+use std::path::PathBuf;
 
+use floodwall::export::keys_json;
 use floodwall::intent::{Action, AgentId, BlastRadius, Intent, IntentKey, Priority};
+use floodwall::merkle::verify_inclusion;
 use floodwall::policy::{BlastNeedsPriority, NoGlobalDestroy, ResourceAllowlist};
 use floodwall::sha256::sha256;
 use floodwall::{
-    Admission, Floodwall, Gate, HoldConfig, Keyring, Outcome, RateLimit, Rejected, SchedulerConfig,
-    SigningKey, Verdict, CONFLICT_CHECK,
+    audit_suffix, Admission, Floodwall, Gate, HoldConfig, Keyring, Ledger, Outcome, RateLimit,
+    Rejected, SchedulerConfig, SigningKey, Verdict, CONFLICT_CHECK,
 };
 
 /// A tiny xorshift PRNG so the demo is reproducible without pulling in `rand`.
@@ -59,6 +69,14 @@ struct Tally {
 }
 
 fn main() {
+    let export_dir = match std::env::args().skip(1).collect::<Vec<_>>().as_slice() {
+        [] => None,
+        [flag, dir] if flag == "--export" => Some(PathBuf::from(dir)),
+        _ => {
+            eprintln!("usage: floodwall [--export DIR]");
+            std::process::exit(2);
+        }
+    };
     let agents = [
         "reconciler-1",
         "reconciler-2",
@@ -73,6 +91,8 @@ fn main() {
         .iter()
         .map(|a| SigningKey::from_seed(&sha256(format!("floodwall-demo/{a}").as_bytes())))
         .collect();
+    // The plane's own key, for signing its checkpoints.
+    let plane_key = SigningKey::from_seed(&sha256(b"floodwall-demo/plane"));
     let keyring = agents
         .iter()
         .zip(&keys)
@@ -99,7 +119,14 @@ fn main() {
     let mut plane = Floodwall::new(admission, gate)
         .with_scheduler(scheduler)
         .with_hold(hold)
-        .with_keyring(keyring.clone());
+        .with_keyring(keyring.clone())
+        // A signed checkpoint every 256 records, so the ledger can be
+        // audited from any checkpoint without replaying it from genesis.
+        .with_ledger(
+            Ledger::new()
+                .with_checkpoints(256)
+                .with_signer(plane_key.clone()),
+        );
 
     let mut rng = Rng(0x9E37_79B9_7F4A_7C15);
     let flood_ticks = 200u64;
@@ -255,6 +282,7 @@ fn main() {
     }
 
     let queued = t.offered - t.forged - t.rate_limited - t.backpressure;
+    let latest = plane.checkpoint();
     let ledger = plane.ledger();
     println!(
         "floodwall demo - {} intents flung at the wall over {flood_ticks} ticks, settled by tick {now}\n",
@@ -303,5 +331,76 @@ fn main() {
     match ledger.verify_signatures(&keyring) {
         Ok(n) => println!("    signatures     : all {n} records signed by their agents"),
         Err(e) => println!("    signatures     : FAILED, {e}"),
+    }
+
+    // An auditor who already trusts the second-to-last checkpoint checks
+    // the rest with only the records after it, and proves one record is in
+    // the ledger with a handful of hashes.
+    let pk = plane_key.verifying_key();
+    let cps = ledger.checkpoints();
+    let trusted = &cps[cps.len() - 2];
+    let suffix = ledger
+        .records_after(trusted)
+        .expect("an earlier checkpoint");
+    let audit = audit_suffix(trusted, &latest, suffix, Some(&pk));
+    let seq = latest.size / 3;
+    let proof = ledger
+        .prove_inclusion(seq, latest.size)
+        .expect("seq < size");
+    let included = verify_inclusion(
+        &ledger.records()[seq as usize].digest,
+        seq,
+        latest.size,
+        &proof,
+        &latest.root,
+    );
+    println!();
+    println!("  checkpoints (audit without replaying)");
+    match ledger.verify_checkpoint_signatures(&pk) {
+        Ok(n) => println!("    checkpoints    : {n}, all signed by the plane"),
+        Err(i) => println!("    checkpoints    : FAILED, checkpoint {i} is not signed"),
+    }
+    match audit {
+        Ok(()) => println!(
+            "    suffix audit   : records {}..{} checked from the checkpoint at {}: ok",
+            trusted.size, latest.size, trusted.size
+        ),
+        Err(e) => println!("    suffix audit   : FAILED, {e}"),
+    }
+    println!(
+        "    inclusion      : record {seq} proven in the latest root with {} hashes: {included}",
+        proof.len()
+    );
+
+    if let Some(dir) = export_dir {
+        let write = |name: &str, body: &dyn Fn(&mut BufWriter<File>) -> std::io::Result<()>| {
+            let path = dir.join(name);
+            let mut out = BufWriter::new(File::create(&path)?);
+            body(&mut out)?;
+            out.flush()
+        };
+        let result = fs::create_dir_all(&dir)
+            .and_then(|()| write("ledger.jsonl", &|out| ledger.export_jsonl(out)))
+            .and_then(|()| {
+                write("ledger-suffix.jsonl", &|out| {
+                    ledger.export_jsonl_from(trusted, out)
+                })
+            })
+            .and_then(|()| {
+                write("keys.json", &|out| {
+                    writeln!(out, "{}", keys_json(&keyring, Some(&pk)))
+                })
+            });
+        match result {
+            Ok(()) => println!(
+                "
+  exported to {}: ledger.jsonl, ledger-suffix.jsonl, keys.json",
+                dir.display()
+            ),
+            Err(e) => {
+                eprintln!("export to {} failed: {e}", dir.display());
+                std::process::exit(1);
+            }
+        }
     }
 }
