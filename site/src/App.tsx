@@ -6,6 +6,7 @@ import { ModelSection } from "./sections/ModelSection";
 import { RoadmapSection } from "./sections/RoadmapSection";
 import { SiteFooter } from "./sections/SiteFooter";
 import { SiteHeader } from "./sections/SiteHeader";
+import { WaitlistSection } from "./sections/WaitlistSection";
 
 export default function App() {
   useCenteredSectionLinks();
@@ -19,6 +20,7 @@ export default function App() {
         <GateSection />
         <LedgerSection />
         <RoadmapSection />
+        <WaitlistSection />
       </main>
       <SiteFooter />
     </>

@@ -1,4 +1,4 @@
-import { NAV_SECTIONS, NAV_SECTION_IDS, REPO_URL } from "../content";
+import { NAV_SECTIONS, NAV_SECTION_IDS } from "../content";
 import { useActiveSection, useIsScrolled } from "../hooks";
 import { BrandMark } from "../components/BrandMark";
 
@@ -22,8 +22,8 @@ export function SiteHeader() {
             </a>
           ))}
         </div>
-        <a className="button button-sm" href={REPO_URL}>
-          View the Crate
+        <a className="button button-sm" href="#waitlist">
+          Join the waitlist
         </a>
       </nav>
     </header>

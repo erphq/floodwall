@@ -2,6 +2,10 @@
 
 export const REPO_URL = "https://github.com/erphq/floodwall";
 
+export const WAITLIST_FORM_URL = "https://tally.so/r/6DJeoP";
+export const WAITLIST_EMBED_URL =
+  "https://tally.so/embed/6DJeoP?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1";
+
 export const HERO_VIDEO_URL = "/hero-sf.mp4";
 export const FOOTER_POSTER_URL = "/footer-sf-poster.jpg";
 
@@ -106,6 +110,7 @@ export const FOOTER_GROUPS: { title: string; links: Link[] }[] = [
       { label: "Model", href: "#model" },
       { label: "Gate", href: "#gate" },
       { label: "Ledger", href: "#ledger" },
+      { label: "Waitlist", href: "#waitlist" },
     ],
   },
   {
