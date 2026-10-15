@@ -301,6 +301,47 @@ main {
   line-height: 1.25;
 }
 
+/* ------------------------------------------------------------ Waitlist */
+
+/* The Tally form is transparent, so it sits on a solid white card. */
+.waitlist-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--card-padding-lg);
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.waitlist-card iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+}
+
+.waitlist-fallback {
+  margin: 16px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.waitlist-fallback a,
+.noscript-note a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Shown only without JavaScript, when the page itself cannot render. */
+.noscript-note {
+  margin-block: var(--section-space);
+  color: var(--ink-soft);
+  font-size: var(--text-lg);
+  line-height: var(--leading-body);
+}
+
 /* ---------------------------------------------------------- Responsive */
 
 @media (max-width: 980px) {
