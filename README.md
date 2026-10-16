@@ -212,7 +212,7 @@ The ledger exports as [JSON Lines](src/export.rs): a header, then every record a
 ```text
 $ cargo run --release -- --export audit/      # the demo writes ledger.jsonl, ledger-suffix.jsonl and keys.json
 $ node tools/verify-ledger.mjs audit/ledger.jsonl audit/keys.json
-ok: 2043 records from genesis; 8 checkpoints; head 189f5d55…
+ok: 2043 records from genesis; 8 checkpoints; head 809ebcb6…
 ok: 2043 agent signatures and every checkpoint signature verified
 ```
 
@@ -272,7 +272,7 @@ floodwall demo - 4000 intents flung at the wall over 200 ticks, settled by tick 
 
   ledger (tamper-evident)
     records        : 2043
-    head digest    : 189f5d551888eeae1379978c5662e54d7bb4b25323bdf871bbbecd5c0f84c3ca
+    head digest    : 809ebcb64ae1d31182278ab66a094392bd7442c69520f235aa85b6a42cd8216d
     chain valid    : true
     signatures     : all 2043 records signed by their agents
 

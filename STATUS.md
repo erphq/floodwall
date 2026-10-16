@@ -6,7 +6,8 @@ Task ids refer to [GOALS.md](GOALS.md).
 
 v0.3 is done: the ledger can be trusted, and audited, by someone who does
 not trust whoever holds it. v0.4 has begun: the ledger can be kept on
-disk (FW-401). An `Intent` flows through `Admission`
+disk (FW-401), and every record carries the tick it was written at
+(FW-404). An `Intent` flows through `Admission`
 (per-agent token bucket + bounded priority queue with backpressure) into
 the scheduler, which starts only what may run now: a `Global` change
 alone, `Region` changes one at a time with their resource to themselves,
@@ -38,10 +39,10 @@ of its own, checks it from genesis, and discards only a last line a crash
 left unfinished; any other bad line is refused and the file left alone.
 
 Still zero dependencies (SHA-256, SHA-512, Ed25519 and the JSON reader are
-from scratch) and pinned to Rust 1.95. 200 unit tests, 11 doctests
+from scratch) and pinned to Rust 1.95. 203 unit tests, 11 doctests
 (including the README examples), a randomized invariant test (300 seeded
 floods plus 6 signed ones, each ending in checkpoint audits), an edge-case
-export fixture that is also kept on disk, and 17 tamper tests of the
+export fixture that is also kept on disk, and 18 tamper tests of the
 independent verifier; fmt + clippy (`-D warnings`) clean.
 
 The floodwall.ai site (React + Vite in `site/`, built into `docs/` for
@@ -49,6 +50,8 @@ GitHub Pages) describes the scheduler and hold queue.
 
 ## Recently shipped
 
+- **FW-404** - every ledger record carries the logical tick it was written
+  at (record encoding v3), and ticks never go back along the chain.
 - **FW-401** - a durable, append-only ledger on disk: `Ledger::create` and
   `Ledger::open`, a file that is the ledger's own JSON Lines export,
   every decision synced before it is reported, a lock against a second
@@ -69,10 +72,10 @@ GitHub Pages) describes the scheduler and hold queue.
 
 ## Next up
 
-- **v0.4 persistence + replay** - FW-402 to FW-405: rebuilding admission,
-  scheduler and hold state from a reopened ledger (FW-402, FW-405), so a
-  restarted plane can carry on where it stopped, the tick on every record
-  (FW-404), and a replay property test (FW-403).
+- **v0.4 persistence + replay** - FW-402, FW-403 and FW-405: rebuilding
+  admission, scheduler and hold state from a reopened ledger (FW-402,
+  FW-405), so a restarted plane can carry on where it stopped, and a
+  replay property test (FW-403).
 
 ## Known gaps
 
@@ -90,8 +93,9 @@ GitHub Pages) describes the scheduler and hold queue.
   `Ledger::checkpoint`, covers those records.
 - The whole ledger is still held in memory, and reopening reads all of it.
 - A retired agent key (kept for audits after a rotation) verifies any of
-  its agent's records, because records do not yet carry the time they were
-  written (FW-404).
+  its agent's records. Records now carry their tick (FW-404), so a key
+  could be limited to the records before its retirement, but the keyring
+  does not record when a key was retired yet.
 
 - An intent the caller never completes holds its place forever (FW-906).
 - The `by` in a release or expiry is free text, not a verified identity

@@ -66,6 +66,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Breaking:** every ledger record carries the logical tick it was
+  written at (FW-404): `Record::tick`, covered by the digest under record
+  encoding `floodwall/ledger/record/v3` (the tick follows `seq`). The
+  ledger keeps a clock that only moves forward (`Ledger::clock`,
+  `Ledger::advance_clock`); a `Floodwall` keeps it at the plane's own
+  clock, so every decision, release, expiry and outcome shows when it
+  happened. `Floodwall::with_ledger` brings whichever of the two clocks is
+  behind up to the other, so they never disagree. `Ledger::verify`, `Ledger::open` and `Ledger::read_jsonl`
+  refuse a record whose tick is earlier than the one before it. The JSON
+  Lines export writes `"tick"` as a decimal string after `"seq"` (a tick
+  can exceed 2^53) and names record encoding v3 in its header;
+  `tools/verify-ledger.mjs` checks both, and the edge-case fixture has
+  ticks past 2^53. The reference digests are pinned again from an
+  independent implementation of v3.
 - Durable, append-only ledger on disk (FW-401). `Ledger::create(path)`
   starts a ledger in a new file and `Ledger::open(path)` picks it up again
   after a restart or crash; the file is the ledger's JSON Lines export,

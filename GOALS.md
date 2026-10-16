@@ -102,8 +102,9 @@ independent model).
   ledger on restart.
 - **FW-403** Property test: replay(record-stream) reproduces the live
   decisions.
-- **FW-404** *(new)* Record the tick on every ledger record. Conflict
-  windows and hold TTLs depend on time, so replay needs it.
+- **FW-404** ✓ *(new)* Record the tick on every ledger record. Conflict
+  windows and hold TTLs depend on time, so replay needs it. `Record::tick`,
+  record encoding v3, and a ledger clock that never goes back.
 - **FW-405** *(new)* Rebuild scheduler and hold state (in-flight intents,
   conflict claims, held intents, pending releases) from the ledger, not
   just admission state.
