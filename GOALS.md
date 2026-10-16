@@ -98,15 +98,19 @@ independent model).
   `Ledger::open` keep the ledger in a file that is its JSON Lines export,
   synced before any decision is reported; opening locks the file, checks
   it from genesis, and recovers from a crash mid-write.
-- **FW-402** Rebuild full plane state (buckets, queue watermarks) from the
-  ledger on restart.
+- **FW-402** ✓ Rebuild full plane state (buckets, queue watermarks) from the
+  ledger on restart. `Floodwall::resume` replays the ledger on a newly
+  built plane and checks every record comes out the same; every intent
+  that gets into the queue is recorded (`queued`).
 - **FW-403** Property test: replay(record-stream) reproduces the live
   decisions.
-- **FW-404** *(new)* Record the tick on every ledger record. Conflict
-  windows and hold TTLs depend on time, so replay needs it.
-- **FW-405** *(new)* Rebuild scheduler and hold state (in-flight intents,
+- **FW-404** ✓ *(new)* Record the tick on every ledger record. Conflict
+  windows and hold TTLs depend on time, so replay needs it. `Record::tick`,
+  record encoding v3, and a ledger clock that never goes back.
+- **FW-405** ✓ *(new)* Rebuild scheduler and hold state (in-flight intents,
   conflict claims, held intents, pending releases) from the ledger, not
-  just admission state.
+  just admission state. Delivered with FW-402: the replay rebuilds all of
+  it.
 
 ## v0.5 - policy as code
 
