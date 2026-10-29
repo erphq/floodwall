@@ -3,7 +3,7 @@
 export const REPO_URL = "https://github.com/erphq/floodwall";
 
 export const HERO_VIDEO_URL = "/hero-sf.mp4";
-export const FOOTER_POSTER_URL = "/footer-sf-poster.jpg";
+export const FOOTER_PRINT_URL = "/footer-water.webp";
 
 export type Link = { label: string; href: string };
 
@@ -122,7 +122,7 @@ export const FOOTER_GROUPS: { title: string; links: Link[] }[] = [
     links: [
       { label: "VMyard agent runtimes", href: "https://www.vmyard.com/" },
       { label: "knockstat server-log analytics", href: "https://www.knockstat.com/" },
-      { label: "ERP.AI", href: "https://www.erp.ai/" },
+      { label: "ERP•AI", href: "https://www.erp.ai/" },
     ],
   },
 ];
