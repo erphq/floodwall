@@ -5,3 +5,6 @@
 Cargo.lock
 .DS_Store
 npm-debug.log*
+
+# Local Claude Code session config
+/.claude/
