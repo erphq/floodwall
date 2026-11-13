@@ -2,59 +2,80 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  border-bottom: 1px solid transparent;
-  transition:
-    background 200ms ease,
-    border-color 200ms ease,
-    box-shadow 200ms ease;
+  background: var(--canvas);
 }
-
-.site-header[data-scrolled="true"] {
-  border-bottom-color: var(--line);
-  background: rgba(var(--paper-rgb), 0.82);
-  box-shadow: 0 8px 32px rgba(47, 110, 137, 0.08);
-  backdrop-filter: blur(16px) saturate(1.4);
-}
-
 .nav-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  height: var(--header-height);
+  min-height: var(--header-height);
 }
-
 .nav-links {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-wrap: wrap;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 28px;
 }
-
 .nav-links a {
-  border-radius: 999px;
-  padding: 8px 12px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 4px;
   color: var(--muted);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition:
-    color 180ms ease,
-    background 180ms ease;
+  font-size: 15px;
+  font-weight: 500;
+  transition: color var(--motion-fast) var(--ease-out);
 }
-
-/* The same shades at the top of the page and once the header turns solid. */
-.nav-links a:hover,
-.nav-links a:focus-visible {
-  background: var(--tint-hover);
-  color: var(--ink);
+.nav-links a[aria-current] { color: var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  .nav-links a:hover { color: var(--ink); }
 }
-
-.nav-links a[aria-current] {
-  background: var(--tint-active);
-  color: var(--ink);
+.nav-links a span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
 }
-
-@media (max-width: 980px) {
-  .nav-links {
-    display: none;
-  }
+.nav-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 2px;
+  background: var(--ink);
+  transform-origin: left center;
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform var(--motion-move) var(--ease-out);
+}
+/* Inset: the links span the full header height, so an outside ring would lose its top edge at the viewport. */
+.nav-links a:focus-visible { outline-offset: -4px; }
+/* Forced colours drop backgrounds; the underline keeps the system text colour. */
+@media (forced-colors: active) {
+  .nav-indicator { forced-color-adjust: none; background: CanvasText; }
+}
+.site-header .button { gap: 12px; }
+.site-header .button svg { width: 16px; height: 16px; }
+@media (max-width: 1100px) {
+  .nav-bar { gap: 16px; }
+}
+@media (max-width: 850px) {
+  :root { --header-height: 128px; }
+  .nav-bar { flex-wrap: wrap; gap: 12px; padding-block: 16px 0; }
+  /* The links share the row by their own widths; under enlarged text spacing they wrap instead of overflowing. */
+  .nav-links { order: 3; flex-wrap: wrap; width: 100%; justify-content: space-between; gap: 0 4px; }
+  .nav-links a { flex: 1 1 auto; padding-inline: 0; font-size: var(--text-sm); }
+  .site-header .button { padding-inline: 14px; font-size: var(--text-xs); }
+}
+/* Six sections and the call to action only fit narrow phones once Home (the logo) leaves the menu. */
+@media (max-width: 380px) {
+  .site-header .button .button-arrow { display: none; }
+  .nav-links a[data-section="home"] { display: none; }
+  .logo { font-size: 20px; }
+  .site-header .button { padding-inline: 10px; }
 }

@@ -1,11 +1,13 @@
-type SectionHeadingProps = { id: string; kicker: string; children: string };
+import type { ReactNode } from "react";
 
-/** Kicker plus display heading that opens a full-width section. */
+type SectionHeadingProps = { id: string; kicker: string; children: ReactNode };
+
+/** A ruled drawing-title band: a label-width ruled tab above a full-width heading. */
 export function SectionHeading({ id, kicker, children }: SectionHeadingProps) {
   return (
     <header className="section-heading">
       <p className="kicker">{kicker}</p>
-      <h2 id={id} className="display-heading">
+      <h2 id={id} className="display-heading staccato-heading">
         {children}
       </h2>
     </header>
