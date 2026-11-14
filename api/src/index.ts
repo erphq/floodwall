@@ -3,7 +3,7 @@
 
 import { approveUser, listUsers, removeUser } from "./admin";
 import { currentPlan, manageBilling, receiveWebhook, startCheckout } from "./billing";
-import { currentSession, sendCode, signOut, sweep, verifyCode } from "./auth";
+import { currentSession, sendCode, signOut, sweep, updateProfile, verifyCode } from "./auth";
 import type { Env } from "./env";
 import { allowedOrigin, HttpError, json, preflight, withCors } from "./http";
 import { MESSAGES } from "./rules";
@@ -24,6 +24,8 @@ async function route(request: Request, env: Env, origin: string | null) {
       return verifyCode(request, env, now);
     case "GET /auth/session":
       return currentSession(request, env, now);
+    case "POST /auth/profile":
+      return updateProfile(request, env, now);
     case "POST /auth/signout":
       return signOut(request, env);
     case "GET /admin/users":
