@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { AUTH_COPY, CODE_LENGTH, NEXT_PARAM, RESEND_COOLDOWN_MS } from "../../constants/auth";
 import { authClient, safeNext } from "../../helpers/auth";
-import { authCard, authNote, pillOutline, pillSolid } from "../../styles/classes";
+import { authCard, authInput, authNote, pillOutline, pillSolid } from "../../styles/classes";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Input } from "../ui/input";
@@ -11,8 +11,7 @@ import { Label } from "../ui/label";
 const COPY = AUTH_COPY.form;
 const FIELD = "flex flex-col gap-2";
 const LABEL = "text-sm font-medium text-ink";
-const INPUT =
-  "h-11 rounded-none border-line-strong bg-surface px-3.5 text-base text-ink md:text-base focus-visible:border-ink focus-visible:ring-0";
+const INPUT = authInput;
 
 type Busy = "send" | "resend" | "verify" | null;
 

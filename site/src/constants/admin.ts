@@ -41,6 +41,19 @@ export const ADMIN_COPY = {
   /** Under an approved account: who approved it. */
   approvedBy: (by: string) => `Approved by ${by}`,
   retry: "Try again",
+  credit: {
+    title: "Give credit",
+    description:
+      "Credit comes off the account's next invoices before its card is charged. It shows on their account page. Use it for goodwill, outages or prepayments.",
+    email: "Account",
+    amount: "Amount (USD)",
+    note: "Note on the invoice",
+    notePlaceholder: "Thanks for the early feedback",
+    grant: "Give credit",
+    granting: "Giving credit…",
+    confirm: (email: string, amount: string) => `Give ${email} ${amount} of credit? It can't be taken back here.`,
+    granted: (email: string, amount: string, total: string) => `Gave ${email} ${amount}. Their credit is now ${total}.`,
+  },
 };
 
 /** "4 Nov 2026, 14:05", in the reader's time zone. */

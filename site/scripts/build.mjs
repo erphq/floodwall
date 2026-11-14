@@ -6,8 +6,8 @@
 // - 404.html, the same page with #root left empty. GitHub Pages serves it for every other path
 //   (/pricing, /login, /app/...), which the app then renders in the browser without first showing
 //   the landing page.
-// - pricing/index.html, that same shell, so /pricing answers 200 rather than GitHub Pages' 404
-//   and search engines index it.
+// - pricing/, terms/, privacy/ and refunds/index.html, that same shell, so those pages answer 200
+//   rather than GitHub Pages' 404 and search engines index them.
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -29,8 +29,10 @@ if (html.split(empty).length !== 2) throw new Error(`${page} must contain exactl
 
 const { render } = await import(pathToFileURL(path.join(ssrDir, "entry-server.js")).href);
 fs.writeFileSync(path.join(outDir, "404.html"), html);
-fs.mkdirSync(path.join(outDir, "pricing"), { recursive: true });
-fs.writeFileSync(path.join(outDir, "pricing", "index.html"), html);
+for (const shell of ["pricing", "terms", "privacy", "refunds"]) {
+  fs.mkdirSync(path.join(outDir, shell), { recursive: true });
+  fs.writeFileSync(path.join(outDir, shell, "index.html"), html);
+}
 // A replacer function, so `$&`-style patterns in the rendered page are written literally.
 fs.writeFileSync(page, html.replace(empty, () => `<div id="root">${render()}</div>`));
 fs.rmSync(ssrDir, { recursive: true, force: true });

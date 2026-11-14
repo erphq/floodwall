@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import { BILLING_COPY, BILLING_RETURN_PARAM, PLAN_NAMES } from "../../constants/billing";
 import { PRICING_PATH } from "../../constants/pricing";
-import { billingAvailable } from "../../helpers/billing";
+import { billingAvailable, formatCredit, saveCode } from "../../helpers/billing";
 import { useBilling } from "../../hooks/useBilling";
 import { authCard, monoLabel, pillOutline, pillSolid } from "../../styles/classes";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import { DiscountCodeField } from "./DiscountCodeField";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
 /**
- * The account's plan, with the way to upgrade on Free, and Paygate's billing page (invoices, card,
- * cancelling) on a paid plan. Coming back from Stripe Checkout (?billing=success) it asks Paygate
- * for the plan, since the webhook may not have landed yet.
+ * The account's plan, with the way to upgrade on Free (and a discount code to take off), and
+ * Paygate's billing page (invoices, card, cancelling) on a paid plan. Any credit the account holds
+ * shows beside the plan. Coming back from Stripe Checkout (?billing=success) it asks Paygate for the
+ * plan, since the webhook may not have landed yet.
  */
 export function BillingCard() {
   const [returning] = useState(
@@ -24,6 +26,8 @@ export function BillingCard() {
   useEffect(() => {
     if (!returning || !billing.plan) return;
     setNotice(billing.plan.plan === "free" ? BILLING_COPY.stillProcessing : BILLING_COPY.thanks);
+    // The code was spent on that checkout.
+    saveCode("");
     // Drop the parameter so a reload doesn't say it again.
     const url = new URL(window.location.href);
     url.searchParams.delete(BILLING_RETURN_PARAM);
@@ -57,7 +61,22 @@ export function BillingCard() {
             )}
           </p>
           {plan.status === "past_due" && <p className="text-sm text-ink">{BILLING_COPY.pastDue}</p>}
+          {!!billing.credit?.credit && (
+            <p>
+              {BILLING_COPY.credit(formatCredit(billing.credit.credit, billing.credit.currency))}
+              <span className="block text-sm text-muted">{BILLING_COPY.creditNote}</span>
+            </p>
+          )}
           {!paid && <p className="text-sm text-muted">{BILLING_COPY.free}</p>}
+          {!paid && (
+            <DiscountCodeField
+              code={billing.code}
+              error={billing.codeError}
+              checking={billing.checkingCode}
+              onApply={(typed) => void billing.applyCode(typed)}
+              onRemove={billing.clearCode}
+            />
+          )}
           <div className="flex flex-wrap gap-2">
             {paid ? (
               <Button type="button" className={pillSolid} disabled={!!billing.busy} onClick={() => void billing.manage()}>

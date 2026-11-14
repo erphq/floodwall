@@ -44,7 +44,8 @@ export const AUTH_COPY = {
     title: "Gate your first agent change.",
     lead: "Create your free account with just your email. Floodwall is in beta, so new accounts join the waitlist, and we let people into the console a few at a time. No credit card or API key is needed.",
     note: "We will email you a six-digit sign-in code. There is no password. Your account starts on the Free plan.",
-    terms: "Creating an account means you accept the terms. The privacy notice lists what we store.",
+    /** Read around two links: the Terms of Service, then the Privacy Policy. */
+    terms: ["Creating an account means you accept the ", "Terms of Service", ". The ", "Privacy Policy", " lists what we store."],
     switchPrompt: "Already have an account?",
     switchLink: "Sign in",
   },

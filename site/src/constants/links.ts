@@ -1,4 +1,5 @@
 import type { Link } from "../types";
+import { LEGAL_PATHS } from "./legal";
 
 export const REPO_URL = "https://github.com/erphq/floodwall";
 
@@ -39,6 +40,13 @@ export const NAV_LINKS = [
 
 /** Every landing section the header tracks, in page order; Home is the logo's. */
 export const NAV_SECTION_IDS = ["home", "line", "model", "gate", "ledger", "roadmap", "pricing", "waitlist"] as const;
+
+/** The legal pages, in the footer's bottom bar beside the credit. */
+export const FOOTER_LEGAL_LINKS: Link[] = [
+  { label: "Terms", href: LEGAL_PATHS.terms },
+  { label: "Privacy", href: LEGAL_PATHS.privacy },
+  { label: "Refunds", href: LEGAL_PATHS.refunds },
+];
 
 export const FOOTER_GROUPS: { title: string; links: Link[] }[] = [
   {

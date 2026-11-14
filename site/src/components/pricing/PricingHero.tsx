@@ -5,10 +5,12 @@ import { LandingSectionHeading } from "../landing/LandingSectionHeading";
 import { Icon } from "../shared/Icon";
 import { AUTH_PATHS } from "../../constants/auth";
 import { BILLING_COPY } from "../../constants/billing";
-import { billingAvailable } from "../../helpers/billing";
+import { useEffect } from "react";
+import { billingAvailable, codeFromPage } from "../../helpers/billing";
 import { useBilling } from "../../hooks/useBilling";
 import { useSession } from "../../hooks/useSession";
 import type { PricingPlan } from "../../constants/pricing";
+import { DiscountCodeField } from "../billing/DiscountCodeField";
 import { type PlanAction, PricingPlanCard } from "./PricingPlanCard";
 
 /** The opening sheet: the offer, the four plans in one ruled rail, and Enterprise across their foot. */
@@ -16,6 +18,9 @@ export function PricingHero() {
   const { session } = useSession();
   const member = session.status === "signedIn" && !session.user.waiting;
   const billing = useBilling(member && billingAvailable);
+  // A link like /pricing?code=LAUNCH20 keeps its code for the tab, through sign-up and sign-in, until
+  // checkout; a signed-in account on Free sees it applied below the plans.
+  useEffect(() => void codeFromPage(), []);
 
   // Signed out, or in the demo, every card keeps its link (Get started opens sign-up). A
   // signed-in account sees its own plan marked and can buy the others.
@@ -62,6 +67,17 @@ export function PricingHero() {
             <PricingPlanCard key={plan.name} plan={plan} action={actionFor(plan)} />
           ))}
         </ol>
+        {member && billing.plan?.plan === "free" && (
+          <div className="pricing-code">
+            <DiscountCodeField
+              code={billing.code}
+              error={billing.codeError}
+              checking={billing.checkingCode}
+              onApply={(typed) => void billing.applyCode(typed)}
+              onRemove={billing.clearCode}
+            />
+          </div>
+        )}
         <p role="status" aria-live="polite" className="pricing-note empty:hidden">
           {billing.error}
         </p>

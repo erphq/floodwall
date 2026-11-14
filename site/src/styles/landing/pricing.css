@@ -158,6 +158,9 @@
 }
 .plan-enterprise > div { display: flex; max-width: 68ch; flex-direction: column; gap: 8px; }
 
+/* A discount code for the next checkout, for a signed-in account on Free. */
+.pricing-code { padding: 24px; border-top: 1px solid var(--line); }
+
 /* Compare: one ruled table in the drawing frame. */
 .compare-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
 .compare-scroll:focus-visible { outline-offset: -4px; }
@@ -249,7 +252,7 @@
   .plan-head, .plan-features li { padding-inline: 16px; }
   .plan-price { padding: 20px 16px 0; }
   .plan-body { padding: 12px 16px 20px; }
-  .plan-cta, .plan-enterprise, .pricing-actions, .faq-item { padding: 20px 16px; }
+  .plan-cta, .plan-enterprise, .pricing-code, .pricing-actions, .faq-item { padding: 20px 16px; }
   .compare-table th, .compare-table td { padding: 12px 16px; }
   .compare-table tbody th { width: 9rem; }
 }
