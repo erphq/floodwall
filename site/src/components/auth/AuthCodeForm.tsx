@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { AUTH_COPY, CODE_LENGTH, NEXT_PARAM, RESEND_COOLDOWN_MS } from "../../constants/auth";
+import { AUTH_COPY, CODE_LENGTH, NAME_MAX_LENGTH, NEXT_PARAM, RESEND_COOLDOWN_MS } from "../../constants/auth";
 import { authClient, safeNext } from "../../helpers/auth";
 import { authCard, authInput, authNote, pillOutline, pillSolid } from "../../styles/classes";
 import { Button } from "../ui/button";
@@ -17,12 +17,13 @@ type Busy = "send" | "resend" | "verify" | null;
 
 /**
  * Sign-in in two steps on one card: an email address, then the six-digit code
- * sent to it. Shared by /login and /signup, which differ only in where a new
- * session goes next.
+ * sent to it. Shared by /login and /signup, which differ in where a new
+ * session goes next, and in the name sign-up can start the account with.
  */
 export function AuthCodeForm({ page }: { page: "login" | "signup" }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sentTo, setSentTo] = useState("");
@@ -30,13 +31,13 @@ export function AuthCodeForm({ page }: { page: "login" | "signup" }) {
   const [demoCode, setDemoCode] = useState("");
   const [busy, setBusy] = useState<Busy>(null);
   const [status, setStatus] = useState("");
-  const emailInput = useRef<HTMLInputElement>(null);
+  const firstInput = useRef<HTMLInputElement>(null);
   const codeInput = useRef<HTMLInputElement>(null);
   const codeShown = sentTo !== "";
 
   // Each step puts the cursor where the next thing is typed.
   useEffect(() => {
-    (codeShown ? codeInput : emailInput).current?.focus();
+    (codeShown ? codeInput : firstInput).current?.focus();
   }, [codeShown]);
 
   async function run(kind: Exclude<Busy, null>, work: () => Promise<void>) {
@@ -78,7 +79,7 @@ export function AuthCodeForm({ page }: { page: "login" | "signup" }) {
   function onVerify(event: FormEvent) {
     event.preventDefault();
     void run("verify", async () => {
-      await authClient.verifyCode(sentTo, code);
+      await authClient.verifyCode(sentTo, code, page === "signup" ? name.trim() || undefined : undefined);
       navigate(safeNext(page, params.get(NEXT_PARAM)), { replace: true });
     });
   }
@@ -132,12 +133,29 @@ export function AuthCodeForm({ page }: { page: "login" | "signup" }) {
         </form>
       ) : (
         <form className="flex flex-col gap-5" onSubmit={onSendCode}>
+          {page === "signup" && (
+            <div className={FIELD}>
+              <Label className={LABEL} htmlFor="name">
+                {COPY.nameLabel} <span className="font-normal text-muted">({COPY.nameOptional})</span>
+              </Label>
+              <Input
+                ref={firstInput}
+                id="name"
+                name="name"
+                className={INPUT}
+                autoComplete="name"
+                maxLength={NAME_MAX_LENGTH}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+          )}
           <div className={FIELD}>
             <Label className={LABEL} htmlFor="email">
               {COPY.emailLabel}
             </Label>
             <Input
-              ref={emailInput}
+              ref={page === "signup" ? undefined : firstInput}
               id="email"
               name="email"
               type="email"

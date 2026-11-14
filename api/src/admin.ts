@@ -31,6 +31,7 @@ async function emailFrom(request: Request) {
 
 type AccountRow = {
   email: string;
+  name: string | null;
   status: string;
   created_at: number;
   last_sign_in_at: number;
@@ -42,7 +43,7 @@ export async function listUsers(request: Request, env: Env, now: number) {
   await requireAdmin(request, env, now);
   const admins = adminEmails(env);
   const { results } = await env.DB.prepare(
-    `SELECT email, status, created_at, last_sign_in_at, approved_at, approved_by FROM users
+    `SELECT email, name, status, created_at, last_sign_in_at, approved_at, approved_by FROM users
      ORDER BY status = 'waiting' DESC, created_at DESC LIMIT ?`,
   )
     .bind(LIST_LIMIT)
@@ -50,6 +51,7 @@ export async function listUsers(request: Request, env: Env, now: number) {
   const open = isOpen(env);
   const users = results.map((row) => ({
     email: row.email,
+    name: row.name,
     // The status the account has now: an admin never waits, even one added to
     // ADMIN_EMAILS after joining the waitlist, and nobody waits while sign-up
     // is open. A row stored as waiting waits again if the waitlist comes back.
