@@ -43,7 +43,7 @@ async function route(request: Request, env: Env, origin: string | null) {
     case "POST /billing/change":
       return changePlan(request, env, now);
     case "POST /billing/manage":
-      return manageBilling(request, env, now);
+      return manageBilling(request, env, now, origin!);
     case "GET /billing/promo":
       return lookupCode(request, env, now);
     case "GET /billing/credits":

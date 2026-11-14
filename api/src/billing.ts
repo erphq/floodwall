@@ -235,9 +235,11 @@ export async function changePlan(request: Request, env: Env, now: number) {
   return json(publicPlan(row));
 }
 
-export async function manageBilling(request: Request, env: Env, now: number) {
+export async function manageBilling(request: Request, env: Env, now: number, origin: string) {
   const { id } = await requireMember(request, env, now);
-  const answer = await paygate(env, "POST", "/billing-link", { external_id: id });
+  // The hosted page's "Back to Floodwall" link: the account page on the site the reader came from
+  // (one of ALLOWED_ORIGINS, which Paygate also checks against the app's allowed origins).
+  const answer = await paygate(env, "POST", "/billing-link", { external_id: id, return_url: `${origin}/account` });
   if (answer.status === 404) throw new HttpError(404, MESSAGES.noBilling);
   if (answer.status !== 200 && answer.status !== 201) paygateFailed("billing link", answer);
   return json({ url: answer.body.url });
