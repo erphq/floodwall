@@ -38,7 +38,7 @@ export const NAV_LINKS = [
 ] as const;
 
 /** Every landing section the header tracks, in page order; Home is the logo's. */
-export const NAV_SECTION_IDS = ["home", "line", "model", "gate", "ledger", "roadmap", "waitlist"] as const;
+export const NAV_SECTION_IDS = ["home", "line", "model", "gate", "ledger", "roadmap", "pricing", "waitlist"] as const;
 
 export const FOOTER_GROUPS: { title: string; links: Link[] }[] = [
   {
@@ -48,6 +48,7 @@ export const FOOTER_GROUPS: { title: string; links: Link[] }[] = [
       { label: "Model", href: "#model" },
       { label: "Gate", href: "#gate" },
       { label: "Ledger", href: "#ledger" },
+      { label: "Pricing", href: PRICING_PATH },
       { label: "Waitlist", href: "#waitlist" },
     ],
   },
