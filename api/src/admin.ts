@@ -4,9 +4,11 @@
 //   GET  /admin/users              every account, the waiting ones first
 //   POST /admin/approve  { email } lets a waiting account in and emails it
 //   POST /admin/remove   { email } deletes an account and its sessions
+//   POST /admin/credit   { email, dollars, note?, requestId } gives an account credit through Paygate
 
 import { adminEmails, isOpen, normalizeEmail, sessionUser } from "./auth";
 import type { Env } from "./env";
+import { paygate, paygateFailed } from "./billing";
 import { HttpError, json, readJson } from "./http";
 import { approvedEmail, sendEmail } from "./mail";
 import { MESSAGES } from "./rules";
@@ -104,4 +106,46 @@ export async function removeUser(request: Request, env: Env, now: number) {
   ]);
   if (!removed.meta.changes) throw new HttpError(404, MESSAGES.noSuchUser);
   return json({ removed: true });
+}
+
+/** The most credit one grant gives, in dollars. */
+const MAX_CREDIT_DOLLARS = 10_000;
+
+/**
+ * Gives an account credit, which Stripe spends on its next invoices before charging its card. The
+ * page sends a `requestId` per grant and repeats it on a retry, so a grant whose answer was lost
+ * isn't given twice.
+ */
+export async function grantCredit(request: Request, env: Env, now: number) {
+  const admin = await requireAdmin(request, env, now);
+  const body = await readJson(request);
+  const email = normalizeEmail(body.email);
+  if (!email) throw new HttpError(400, MESSAGES.badEmail);
+  const dollars = body.dollars;
+  if (typeof dollars !== "number" || !Number.isInteger(dollars) || dollars < 1 || dollars > MAX_CREDIT_DOLLARS) {
+    throw new HttpError(400, MESSAGES.badCredit);
+  }
+  const note = typeof body.note === "string" ? body.note.trim().slice(0, 200) : "";
+  const requestId = typeof body.requestId === "string" && /^[\w-]{8,64}$/.test(body.requestId) ? body.requestId : null;
+  if (!requestId) throw new HttpError(400, MESSAGES.badRequest);
+
+  const user = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first<{ id: string }>();
+  if (!user) throw new HttpError(404, MESSAGES.noSuchUser);
+  const path = `/customers/${encodeURIComponent(user.id)}`;
+
+  // The customer first, with its email, so the Stripe customer the credit sits on carries it.
+  const customer = await paygate(env, "PUT", path, { email }, `credit-customer:${requestId}`);
+  if (customer.status !== 200) paygateFailed("customer", customer);
+  const answer = await paygate(
+    env,
+    "POST",
+    `${path}/credits`,
+    { amount: dollars * 100, currency: "usd", description: note || `Credit from Floodwall (${admin.email})` },
+    `credit:${requestId}`,
+  );
+  if (answer.status === 400 && answer.body?.error?.code === "currency_mismatch") {
+    throw new HttpError(400, answer.body.error.message ?? MESSAGES.badCredit);
+  }
+  if (answer.status !== 200 && answer.status !== 201) paygateFailed("credit", answer);
+  return json({ granted: dollars * 100, credit: Number(answer.body.credit) || 0, currency: answer.body.currency ?? "usd" });
 }

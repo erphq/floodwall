@@ -207,4 +207,105 @@ describe("billing through Paygate", () => {
     const left = await w.db.prepare("SELECT id FROM billing_events").all();
     assert.deepEqual(left.results.map((r) => r.id), ["new"]);
   });
+
+  test("a discount code is looked up before checkout", async () => {
+    const cookie = await w.signIn(ADMIN);
+    answer = (call) =>
+      call.path === "/v1/promotion-codes/LAUNCH20"
+        ? Response.json({ code: "LAUNCH20", coupon: { summary: "20% off for 3 months" } })
+        : Response.json({ error: { code: "invalid_promotion_code", message: "x" } }, { status: 400 });
+    const good = await w.call("/billing/promo?code=LAUNCH20", { method: "GET", cookie });
+    assert.equal(good.status, 200);
+    assert.deepEqual(good.body, { code: "LAUNCH20", summary: "20% off for 3 months" });
+
+    const bad = await w.call("/billing/promo?code=NOPE", { method: "GET", cookie });
+    assert.equal(bad.status, 400);
+    assert.match(bad.body.error, /isn't valid/);
+
+    const calls = w.paygateCalls.length;
+    for (const code of ["", "has space", "x".repeat(65), "../etc"]) {
+      const r = await w.call(`/billing/promo?code=${encodeURIComponent(code)}`, { method: "GET", cookie });
+      assert.equal(r.status, 400, code);
+    }
+    assert.equal(w.paygateCalls.length, calls, "malformed codes never reach Paygate");
+  });
+
+  test("checkout applies a code instead of offering the box", async () => {
+    const cookie = await w.signIn(ADMIN);
+    answer = () => Response.json({ url: "https://checkout.stripe.com/c/pay/cs_2" });
+    assert.equal((await w.call("/billing/checkout", { body: { plan: "team", code: " LAUNCH20 " }, cookie })).status, 200);
+    const [withCode] = w.paygateCalls;
+    assert.equal(withCode.body.promotion_code, "LAUNCH20");
+    assert.equal(withCode.body.allow_promotion_codes, undefined);
+
+    assert.equal((await w.call("/billing/checkout", { body: { plan: "team" }, cookie })).status, 200);
+    assert.equal(w.paygateCalls[1].body.allow_promotion_codes, true);
+    assert.equal(w.paygateCalls[1].body.promotion_code, undefined);
+
+    answer = () => Response.json({ error: { code: "invalid_promotion_code", message: "x" } }, { status: 400 });
+    const refused = await w.call("/billing/checkout", { body: { plan: "team", code: "EXPIRED" }, cookie });
+    assert.equal(refused.status, 400);
+    assert.match(refused.body.error, /isn't valid/);
+  });
+
+  test("credits: none before Paygate knows the account, then its balance and history", async () => {
+    const cookie = await w.signIn(ADMIN);
+    answer = () => Response.json({ error: { code: "not_found" } }, { status: 404 });
+    const none = await w.call("/billing/credits", { method: "GET", cookie });
+    assert.equal(none.status, 200);
+    assert.deepEqual(none.body, { credit: 0, currency: null, history: [] });
+    assert.equal(w.paygateCalls[0].path, `/v1/customers/${await userId(ADMIN)}/credits`);
+
+    answer = () =>
+      Response.json({
+        credit: 2500,
+        balance: -2500,
+        currency: "usd",
+        transactions: [{ id: "cbtxn_1", amount: -2500, currency: "usd", description: "Launch thanks", created: "2026-11-14T10:00:00Z" }],
+      });
+    const some = (await w.call("/billing/credits", { method: "GET", cookie })).body;
+    assert.deepEqual(some, {
+      credit: 2500,
+      currency: "usd",
+      history: [{ amount: 2500, description: "Launch thanks", created: "2026-11-14T10:00:00Z" }],
+    });
+    assert.equal((await w.call("/billing/credits", { method: "GET" })).status, 401);
+  });
+
+  test("an admin gives credit: the customer with its email, then the grant, keyed for retries", async () => {
+    const cookie = await w.signIn(ADMIN);
+    await w.signIn("ada@example.com");
+    const ada = await userId("ada@example.com");
+    answer = (call) =>
+      call.method === "PUT"
+        ? Response.json({ id: "cus_1", external_id: ada })
+        : Response.json({ credit: 5000, balance: -5000, currency: "usd", transaction: {} }, { status: 201 });
+    const r = await w.call("/admin/credit", {
+      body: { email: "Ada@Example.com", dollars: 50, note: "Sorry for the outage", requestId: "req-12345678" },
+      cookie,
+    });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body, { granted: 5000, credit: 5000, currency: "usd" });
+
+    const [put, post] = w.paygateCalls;
+    assert.equal(put.method, "PUT");
+    assert.equal(put.path, `/v1/customers/${ada}`);
+    assert.deepEqual(put.body, { email: "ada@example.com" });
+    assert.equal(post.path, `/v1/customers/${ada}/credits`);
+    assert.deepEqual(post.body, { amount: 5000, currency: "usd", description: "Sorry for the outage" });
+    assert.equal(post.headers["idempotency-key"], "credit:req-12345678");
+  });
+
+  test("credit is refused to non-admins, bad amounts and unknown accounts", async () => {
+    const member = await w.signIn("ada@example.com");
+    const body = { email: ADMIN, dollars: 10, requestId: "req-12345678" };
+    assert.equal((await w.call("/admin/credit", { body, cookie: member })).status, 403);
+    const cookie = await w.signIn(ADMIN);
+    for (const dollars of [0, -5, 1.5, 10_001, "10", undefined]) {
+      assert.equal((await w.call("/admin/credit", { body: { ...body, dollars }, cookie })).status, 400, String(dollars));
+    }
+    assert.equal((await w.call("/admin/credit", { body: { ...body, requestId: undefined }, cookie })).status, 400);
+    assert.equal((await w.call("/admin/credit", { body: { ...body, email: "nobody@example.com" }, cookie })).status, 404);
+    assert.equal(w.paygateCalls.length, 0);
+  });
 });

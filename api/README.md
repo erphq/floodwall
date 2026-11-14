@@ -101,10 +101,13 @@ which the site shows as it is.
 | `GET /admin/users` | | `200 { "signup": "waitlist" \| "open", "users": [...] }`, the waiting ones first; `401` signed out; `403` not an admin |
 | `POST /admin/approve` | `{ "email": "..." }` | `200 { "approved": true, "emailed": true \| false }`; `404` no such account; `401`, `403` as above |
 | `POST /admin/remove` | `{ "email": "..." }` | `200 { "removed": true }`; `400` an admin; `404` no such account; `401`, `403` as above |
+| `POST /admin/credit` | `{ "email": "...", "dollars": 50, "note"?: "...", "requestId": "<uuid>" }` | `200 { "granted": 5000, "credit": 7500, "currency": "usd" }` (cents); `400` not 1 to 10,000 whole dollars, or no `requestId`; `404` no such account; `401`, `403` as above. A retry with the same `requestId` grants once |
 
 | `GET /billing` | | `200 <plan>`; `?refresh=1` asks Paygate first; `401` signed out; `403` waiting |
-| `POST /billing/checkout` | `{ "plan": "team" \| "business", "interval": "month" \| "year" }` | `200 { "url": "<Stripe Checkout>" }`; `400` unknown plan; `409` already on a plan; `502` Paygate failed; `503` no key |
+| `POST /billing/checkout` | `{ "plan": "team" \| "business", "interval": "month" \| "year", "code"?: "LAUNCH20" }` | `200 { "url": "<Stripe Checkout>" }`; `400` unknown plan, or a code that isn't valid; `409` already on a plan; `502` Paygate failed; `503` no key |
 | `POST /billing/manage` | `{}` | `200 { "url": "<Paygate billing page>" }`; `404` never checked out |
+| `GET /billing/promo?code=…` | | `200 { "code": "LAUNCH20", "summary": "20% off for 3 months" }`; `400` unknown, expired or used up |
+| `GET /billing/credits` | | `200 { "credit": 2500, "currency": "usd", "history": [{ "amount", "description", "created" }] }` (cents; `credit: 0` before Paygate knows the account) |
 | `POST /billing/webhook` | Paygate's event, signed | `200 { "received": true }`; `400` bad or stale signature. Called by Paygate, not the site: no origin check, no session |
 
 `<plan>` is `{ "plan": "free" | "team" | "business", "status", "features", "periodEnd", "cancelAtPeriodEnd" }`.
@@ -136,24 +139,37 @@ Plans are sold through [Paygate](https://pay.erpai.studio), our Stripe hub
 3. **Manage.** `POST /billing/manage` opens Paygate's hosted billing page:
    invoices, card, cancel and resume.
 
+**Discount codes** are made in Paygate (Apps → `floodwall` → Discounts: a
+coupon with a promotion code, per mode). The site checks one with
+`GET /billing/promo` and sends it with the checkout, which applies it up front;
+without one, Stripe Checkout still offers its own box for a code. A link like
+`/pricing?code=LAUNCH20` keeps the code for the browser tab through sign-up.
+
+**Credit** is Stripe's customer balance: an admin gives it at `/app/admin`
+(`POST /admin/credit`, whole dollars, up to $10,000 a grant) and Stripe spends
+it on the account's next invoices before charging the card. The account page
+shows it (`GET /billing/credits`).
+
 Every account starts on `free`. Plan changes between Team and Business, and
 usage-based overage (metered `decisions`, FW-704), come later.
 
-**Paygate setup** (dashboard → Apps → `floodwall`, test mode first): plans
-`team` ($49/mo, $490/yr) and `business` ($399/mo, $3,990/yr) with these
-features JSON, success and cancel URLs as above, webhook URL
-`https://api.floodwall.ai/billing/webhook`, and allowed origins
-`https://floodwall.ai`, `https://preview.floodwall.ai`.
+**Paygate setup** (done 2026-11-14): app `floodwall`, test mode on the
+paygate-sandbox Stripe account and live mode on ERP.AI MA LLC's. Plans
+`team` ($49/mo, $490/yr) and `business` ($399/mo, $3,990/yr) with prices in
+both modes and these features, webhook URL
+`https://api.floodwall.ai/billing/webhook` in both modes, and default return
+pages on preview.floodwall.ai (test) and floodwall.ai (live).
 
 ```json
-{ "planes": 5, "decisions_included": 250000, "retention_days": 90, "approvers": null, "slack": true, "sso": false }
-{ "planes": null, "decisions_included": 2500000, "retention_days": 365, "approvers": null, "slack": true, "sso": true, "sla": "99.9" }
+{ "planes": 5, "decisions_included": 250000, "overage_per_1k_usd": 0.3, "retention_days": 90, "approvers": "unlimited", "slack": true, "sso": false, "sla": false }
+{ "planes": "unlimited", "decisions_included": 2500000, "overage_per_1k_usd": 0.2, "retention_days": 365, "approvers": "unlimited", "slack": true, "sso": true, "sla": true }
 ```
 
 **Secrets:** `npx wrangler secret put PAYGATE_SECRET_KEY` and
 `npx wrangler secret put PAYGATE_WEBHOOK_SECRET`. A `pg_sk_test_…` key keeps
 everything in Stripe test mode; going live is swapping in the live key and
-live webhook secret, no code change. Run `npm run migrate:remote` for
+live webhook secret, no code change (both are in Box,
+`erp-ai/floodwall/paygate/secret-keys.env`). Run `npm run migrate:remote` for
 `0003_billing.sql` before deploying.
 
 ## Local development
