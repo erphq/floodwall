@@ -102,6 +102,13 @@ which the site shows as it is.
 | `POST /admin/approve` | `{ "email": "..." }` | `200 { "approved": true, "emailed": true \| false }`; `404` no such account; `401`, `403` as above |
 | `POST /admin/remove` | `{ "email": "..." }` | `200 { "removed": true }`; `400` an admin; `404` no such account; `401`, `403` as above |
 
+| `GET /billing` | | `200 <plan>`; `?refresh=1` asks Paygate first; `401` signed out; `403` waiting |
+| `POST /billing/checkout` | `{ "plan": "team" \| "business", "interval": "month" \| "year" }` | `200 { "url": "<Stripe Checkout>" }`; `400` unknown plan; `409` already on a plan; `502` Paygate failed; `503` no key |
+| `POST /billing/manage` | `{}` | `200 { "url": "<Paygate billing page>" }`; `404` never checked out |
+| `POST /billing/webhook` | Paygate's event, signed | `200 { "received": true }`; `400` bad or stale signature. Called by Paygate, not the site: no origin check, no session |
+
+`<plan>` is `{ "plan": "free" | "team" | "business", "status", "features", "periodEnd", "cancelAtPeriodEnd" }`.
+
 `<user>` is `{ "email": "...", "waiting": false, "admin": false }`. `waiting` is
 true while the account is on the waitlist; the site then shows `/waitlist`
 instead of the console. Anything added to the service later that only
@@ -109,6 +116,45 @@ approved accounts may use should check `waiting` the same way.
 
 Without `RESEND_API_KEY`, or an `AUTH_SECRET` of at least 32 characters,
 `/auth/code` and `/auth/verify` answer `503`.
+
+## Billing
+
+Plans are sold through [Paygate](https://pay.erpai.studio), our Stripe hub
+(`~/code/v2/payment-gateway`). The Worker never sees a card or a Stripe key:
+
+1. **Upgrade.** `POST /billing/checkout` asks Paygate for a Stripe Checkout
+   page for the account (`external_id` = the account's id) and the site goes
+   there. Stripe returns to `/account?billing=success`, or `/pricing` if
+   cancelled.
+2. **Paid.** Paygate sends a signed `entitlement.changed` webhook to
+   `POST /billing/webhook`. The Worker checks the signature
+   (HMAC-SHA256 with `PAYGATE_WEBHOOK_SECRET`, 5-minute tolerance), skips an
+   event id it has seen, and copies the plan, status, limits (`features`) and
+   period end onto the account. An older event never overwrites a newer one.
+   `payment.failed` emails the owner. Coming back from checkout, the account
+   page also asks for `?refresh=1`, in case the webhook is still on its way.
+3. **Manage.** `POST /billing/manage` opens Paygate's hosted billing page:
+   invoices, card, cancel and resume.
+
+Every account starts on `free`. Plan changes between Team and Business, and
+usage-based overage (metered `decisions`, FW-704), come later.
+
+**Paygate setup** (dashboard → Apps → `floodwall`, test mode first): plans
+`team` ($49/mo, $490/yr) and `business` ($399/mo, $3,990/yr) with these
+features JSON, success and cancel URLs as above, webhook URL
+`https://api.floodwall.ai/billing/webhook`, and allowed origins
+`https://floodwall.ai`, `https://preview.floodwall.ai`.
+
+```json
+{ "planes": 5, "decisions_included": 250000, "retention_days": 90, "approvers": null, "slack": true, "sso": false }
+{ "planes": null, "decisions_included": 2500000, "retention_days": 365, "approvers": null, "slack": true, "sso": true, "sla": "99.9" }
+```
+
+**Secrets:** `npx wrangler secret put PAYGATE_SECRET_KEY` and
+`npx wrangler secret put PAYGATE_WEBHOOK_SECRET`. A `pg_sk_test_…` key keeps
+everything in Stripe test mode; going live is swapping in the live key and
+live webhook secret, no code change. Run `npm run migrate:remote` for
+`0003_billing.sql` before deploying.
 
 ## Local development
 
@@ -142,10 +188,12 @@ npm run check   # typecheck, bundle, then the tests
 
 The tests run the bundle that `wrangler deploy` would upload in the Workers
 runtime (Miniflare), with an empty D1 database and a stand-in for Resend that
-keeps every email. They cover the whole flow and each rule above, including
+keeps every email. A stand-in for Paygate answers the billing calls. They cover the whole flow
+and each rule above, including
 requests that race each other, a Resend that refuses, a missing secret, the
 cookie's attributes, origin checks, the daily sweep, the waitlist, the admin
-calls and both settings of `SIGNUP_MODE`. CI runs them on every pull request.
+calls, both settings of `SIGNUP_MODE`, and billing: checkout, the billing
+page, signed and replayed webhooks, and webhooks out of order. CI runs them on every pull request.
 
 ## Deploying
 

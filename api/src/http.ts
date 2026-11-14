@@ -31,19 +31,19 @@ export function json(body: unknown, status = 200, headers: Record<string, string
 const MAX_BODY_LENGTH = 4096;
 
 /**
- * The body as text, refused with a 413 once it passes MAX_BODY_LENGTH bytes. It's read a chunk at
+ * The body as text, refused with a 413 once it passes `maxLength` bytes (MAX_BODY_LENGTH by default). It's read a chunk at
  * a time, so a body sent without a Content-Length is stopped there rather than read in full.
  */
-async function readBody(request: Request) {
-  if (Number(request.headers.get("Content-Length")) > MAX_BODY_LENGTH) throw new HttpError(413, MESSAGES.badRequest);
+export async function readBody(request: Request, maxLength = MAX_BODY_LENGTH) {
+  if (Number(request.headers.get("Content-Length")) > maxLength) throw new HttpError(413, MESSAGES.badRequest);
   if (!request.body) return "";
   const reader = request.body.getReader();
-  const bytes = new Uint8Array(MAX_BODY_LENGTH);
+  const bytes = new Uint8Array(maxLength);
   let length = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    if (length + value.byteLength > MAX_BODY_LENGTH) {
+    if (length + value.byteLength > maxLength) {
       await reader.cancel();
       throw new HttpError(413, MESSAGES.badRequest);
     }

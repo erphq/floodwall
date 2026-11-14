@@ -177,7 +177,7 @@ export function SiteHeader({ onLanding = true }: { onLanding?: boolean }) {
                 href={href.startsWith("#") ? `${base}${href}` : href}
                 data-section={id}
                 data-current={isCurrent || undefined}
-                aria-current={isCurrent ? (id === "pricing" ? "page" : "location") : undefined}
+                aria-current={isCurrent ? (id === "pricing" && !onLanding ? "page" : "location") : undefined}
               >
                 <NavItemBox index={index + 1} registerItem={navHover.registerItem} label={label} />
               </a>

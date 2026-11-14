@@ -3,6 +3,7 @@ import { LandingHero } from "./components/landing/LandingHero";
 import { LandingLedgerSection } from "./components/landing/LandingLedgerSection";
 import { LandingLineSection } from "./components/landing/LandingLineSection";
 import { LandingModelSection } from "./components/landing/LandingModelSection";
+import { LandingPricingSection } from "./components/landing/LandingPricingSection";
 import { LandingRoadmapSection } from "./components/landing/LandingRoadmapSection";
 import { LandingWaitlistSection } from "./components/landing/LandingWaitlistSection";
 import { SiteFooter } from "./components/shared/SiteFooter";
@@ -28,6 +29,7 @@ export default function App() {
         <LandingGateSection />
         <LandingLedgerSection />
         <LandingRoadmapSection />
+        <LandingPricingSection />
         <LandingWaitlistSection />
       </main>
       <SiteFooter />

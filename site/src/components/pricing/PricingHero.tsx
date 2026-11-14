@@ -3,10 +3,36 @@ import { EARLY_ACCESS_URL, REPO_URL } from "../../constants/links";
 import { ENTERPRISE_PLAN, PRICING_PLANS } from "../../constants/pricing";
 import { LandingSectionHeading } from "../landing/LandingSectionHeading";
 import { Icon } from "../shared/Icon";
-import { PricingPlanCard } from "./PricingPlanCard";
+import { AUTH_PATHS } from "../../constants/auth";
+import { BILLING_COPY } from "../../constants/billing";
+import { billingAvailable } from "../../helpers/billing";
+import { useBilling } from "../../hooks/useBilling";
+import { useSession } from "../../hooks/useSession";
+import type { PricingPlan } from "../../constants/pricing";
+import { type PlanAction, PricingPlanCard } from "./PricingPlanCard";
 
 /** The opening sheet: the offer, the four plans in one ruled rail, and Enterprise across their foot. */
 export function PricingHero() {
+  const { session } = useSession();
+  const member = session.status === "signedIn" && !session.user.waiting;
+  const billing = useBilling(member && billingAvailable);
+
+  // Signed out, or in the demo, every card keeps its link (Get started opens sign-up). A
+  // signed-in account sees its own plan marked and can buy the others.
+  function actionFor(plan: PricingPlan): PlanAction {
+    if (!member || !billing.plan) return { kind: "link" };
+    const current = billing.plan.plan;
+    if (plan.planKey === current || (plan.name === "Free" && current === "free")) return { kind: "current" };
+    // Already paying: changing plan goes through the account page.
+    if (current !== "free") {
+      const sold = plan.planKey || plan.name === "Free";
+      return sold ? { kind: "link", cta: { label: BILLING_COPY.manage, href: AUTH_PATHS.account } } : { kind: "link" };
+    }
+    if (!plan.planKey) return { kind: "link" };
+    const key = plan.planKey;
+    return { kind: "buy", busy: billing.busy === `${key}:month`, onBuy: () => void billing.checkout(key) };
+  }
+
   return (
     <section className="section pricing-intro" aria-labelledby="pricing-title">
       <div className="section-drawing">
@@ -16,7 +42,8 @@ export function PricingHero() {
         <div className="pricing-lead">
           <p className="feature-copy">
             The crate is open source and always free to run yourself. Floodwall Cloud hosts the ledger, approvals
-            and console for you, billed by the decisions your agents&rsquo; changes need.
+            and console for you: a monthly price that includes a generous number of decisions, then a small
+            charge for each thousand more.
           </p>
           <div className="pricing-actions">
             <p className="pricing-note">Hosted plans by invitation during early access</p>
@@ -32,9 +59,12 @@ export function PricingHero() {
         </div>
         <ol className="plan-rail" aria-label="Plans">
           {PRICING_PLANS.map((plan) => (
-            <PricingPlanCard key={plan.name} plan={plan} />
+            <PricingPlanCard key={plan.name} plan={plan} action={actionFor(plan)} />
           ))}
         </ol>
+        <p role="status" aria-live="polite" className="pricing-note empty:hidden">
+          {billing.error}
+        </p>
         <div className="plan-enterprise">
           <div>
             <h2 className="tag">{ENTERPRISE_PLAN.name}</h2>

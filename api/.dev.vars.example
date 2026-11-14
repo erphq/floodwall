@@ -17,3 +17,10 @@ ADMIN_EMAILS=you@example.com
 
 # Uncomment to let anyone in, as after the beta.
 # SIGNUP_MODE=open
+
+# Billing, through Paygate's test mode (pay.erpai.studio → Apps → floodwall → Test).
+# Without the key, /billing answers 503 and the account page says billing is unavailable.
+PAYGATE_SECRET_KEY=pg_sk_test_...
+# "Show signing secret" on the app page. Point its test webhook URL at a tunnel to
+# this service, e.g. `cloudflared tunnel --url http://127.0.0.1:8787` + /billing/webhook.
+PAYGATE_WEBHOOK_SECRET=
