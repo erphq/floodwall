@@ -128,7 +128,7 @@ describe("billing through Paygate", () => {
     const r = await w.call("/billing/manage", { body: {}, cookie });
     assert.equal(r.status, 200);
     assert.equal(r.body.url, "https://pay.erpai.studio/b/floodwall?t=abc");
-    assert.deepEqual(w.paygateCalls[0].body, { external_id: await userId(ADMIN) });
+    assert.deepEqual(w.paygateCalls[0].body, { external_id: await userId(ADMIN), return_url: `${SITE}/account` });
 
     answer = () => Response.json({ error: { code: "not_found" } }, { status: 404 });
     assert.equal((await w.call("/billing/manage", { body: {}, cookie })).status, 404);
