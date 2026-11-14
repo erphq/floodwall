@@ -3,9 +3,9 @@
   const key = "floodwall-theme";
   const media = matchMedia("(prefers-color-scheme: dark)");
   const root = document.documentElement;
-  // The landing page and /pricing take the site's own stylesheets (.fw-site); useSiteDocument keeps
-  // the mark when the app moves between routes. Every page follows the theme.
-  const landing = location.pathname === "/" || location.pathname === "/pricing";
+  // The landing page, /pricing and the legal pages take the site's own stylesheets (.fw-site);
+  // useSiteDocument keeps the mark when the app moves between routes. Every page follows the theme.
+  const landing = ["/", "/pricing", "/terms", "/privacy", "/refunds"].includes(location.pathname.replace(/(.)\/$/, "$1"));
   root.classList.toggle("fw-site", landing);
   const meta = document.querySelector('meta[name="theme-color"]');
   const valid = value => value === "dark" || value === "light" ? value : null;
