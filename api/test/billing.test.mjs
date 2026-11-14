@@ -309,4 +309,39 @@ describe("billing through Paygate", () => {
     assert.equal((await w.call("/admin/credit", { body: { ...body, email: "nobody@example.com" }, cookie })).status, 404);
     assert.equal(w.paygateCalls.length, 0);
   });
+  test("changing plan: preview asks for the prorated charge, then the change stores the new plan", async () => {
+    const cookie = await w.signIn(ADMIN);
+    const id = await userId(ADMIN);
+    let current = { ...TEAM, subscription_id: "sub_1" };
+    answer = (call) => {
+      if (call.path.startsWith("/v1/entitlements/")) return Response.json(current);
+      if (call.path === "/v1/subscriptions/sub_1/change") {
+        if (call.body.preview) return Response.json({ preview: { amount_due: 31234, currency: "usd", total: 31234, lines: [] } });
+        current = { ...current, plan: "business", features: { planes: null } };
+        return Response.json({ subscription: { id: "sub_1" } });
+      }
+    };
+    const preview = await w.call("/billing/change", { body: { plan: "business", preview: true }, cookie });
+    assert.equal(preview.status, 200);
+    assert.deepEqual(preview.body, { plan: "business", amountDue: 31234, currency: "usd" });
+    const change = w.paygateCalls.find((c) => c.path === "/v1/subscriptions/sub_1/change");
+    assert.deepEqual(change.body, { plan: "business", proration: "always_invoice", preview: true });
+    assert.equal((await w.call("/billing", { method: "GET", cookie })).body.plan, "free");
+
+    const done = await w.call("/billing/change", { body: { plan: "business" }, cookie });
+    assert.equal(done.status, 200);
+    assert.equal(done.body.plan, "business");
+    assert.equal((await w.db.prepare("SELECT plan FROM users WHERE id = ?").bind(id).first()).plan, "business");
+  });
+
+  test("changing plan is refused without a paid plan, to the same plan, or to an unknown one", async () => {
+    const cookie = await w.signIn(ADMIN);
+    let current = { active: false, plan: null, status: null };
+    answer = (call) => (call.path.startsWith("/v1/entitlements/") ? Response.json(current) : undefined);
+    assert.equal((await w.call("/billing/change", { body: { plan: "team" }, cookie })).status, 409);
+    current = { ...TEAM, subscription_id: "sub_1" };
+    assert.equal((await w.call("/billing/change", { body: { plan: "team" }, cookie })).status, 409);
+    assert.equal((await w.call("/billing/change", { body: { plan: "free" }, cookie })).status, 400);
+    assert.equal((await w.call("/billing/change", { body: { plan: "team" } })).status, 401);
+  });
 });

@@ -108,6 +108,7 @@ which the site shows as it is.
 
 | `GET /billing` | | `200 <plan>`; `?refresh=1` asks Paygate first; `401` signed out; `403` waiting |
 | `POST /billing/checkout` | `{ "plan": "team" \| "business", "interval": "month" \| "year", "code"?: "LAUNCH20" }` | `200 { "url": "<Stripe Checkout>" }`; `400` unknown plan, or a code that isn't valid; `409` already on a plan; `502` Paygate failed; `503` no key |
+| `POST /billing/change` | `{ "plan": "team" \| "business", "preview"?: true }` | `200 { plan, amountDue, currency }` with `preview` (the prorated charge now); otherwise moves the subscription and returns the plan as `GET /billing` does. `409` on Free or already on that plan |
 | `POST /billing/manage` | `{}` | `200 { "url": "<Paygate billing page>" }`; `404` never checked out |
 | `GET /billing/promo?code=…` | | `200 { "code": "LAUNCH20", "summary": "20% off for 3 months" }`; `400` unknown, expired or used up |
 | `GET /billing/credits` | | `200 { "credit": 2500, "currency": "usd", "history": [{ "amount", "description", "created" }] }` (cents; `credit: 0` before Paygate knows the account) |
@@ -149,6 +150,11 @@ Plans are sold through [Paygate](https://pay.erpai.studio), our Stripe hub
    page also asks for `?refresh=1`, in case the webhook is still on its way.
 3. **Manage.** `POST /billing/manage` opens Paygate's hosted billing page:
    invoices, card, cancel and resume.
+4. **Change plan.** `POST /billing/change` moves a paid subscription between
+   Team and Business (Paygate's `POST /v1/subscriptions/:id/change`, the id from
+   the entitlement). The site asks with `preview: true` first and shows the
+   prorated charge; the change itself invoices the difference at once
+   (`always_invoice`) and keeps the billing period and renewal date.
 
 **Discount codes** are made in Paygate (Apps → `floodwall` → Discounts: a
 coupon with a promotion code, per mode). The site checks one with
