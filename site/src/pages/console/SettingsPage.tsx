@@ -110,7 +110,7 @@ function NameForm({ initial, onSave }: { initial: string; onSave: (name: string)
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <ConsoleButton type="submit" variant="secondary" aria-disabled={saving || undefined}>
+        <ConsoleButton type="submit" variant="secondary" className="h-11 px-4" aria-disabled={saving || undefined}>
           {saving ? COPY.savingName : COPY.saveName}
         </ConsoleButton>
       </div>

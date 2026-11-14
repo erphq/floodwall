@@ -2,7 +2,8 @@
 // proposal for Floodwall Cloud; they live here so they change in one place.
 
 import { AUTH_PATHS } from "./auth";
-import { EARLY_ACCESS_URL, PRICING_PATH, REPO_URL } from "./links";
+import { CONTACT_EMAIL } from "./legal";
+import { PRICING_PATH, REPO_URL } from "./links";
 
 export { PRICING_PATH };
 
@@ -89,7 +90,7 @@ export const PRICING_PLANS: PricingPlan[] = [
 export const ENTERPRISE_PLAN = {
   name: "Enterprise",
   copy: "Support for self-hosted planes, compliance evidence, custom retention and contracts.",
-  cta: { label: "Talk to us", href: EARLY_ACCESS_URL },
+  cta: { label: "Talk to us", href: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Floodwall Enterprise")}` },
 };
 
 /** What every plan, self-hosted or not, gets from the crate itself. */
