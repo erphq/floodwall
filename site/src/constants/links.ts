@@ -32,11 +32,13 @@ export const NAV_EXPLAINERS = [
   { id: "ledger", label: "Ledger", copy: "Chained records. Independent proof." },
 ] as const;
 
-/** The header's top-level links after that menu: two landing sections and the pricing page. */
+/**
+ * The header's top-level links after that menu: the roadmap section and the pricing page. Signing up
+ * and signing in are the account actions at the bar's right (HeaderAccount), not links here.
+ */
 export const NAV_LINKS = [
   { id: "roadmap", label: "Roadmap", href: "#roadmap" },
   { id: "pricing", label: "Pricing", href: PRICING_PATH },
-  { id: "get-started", label: "Sign up", href: "#get-started" },
 ] as const;
 
 /** Every landing section the header tracks, in page order; Home is the logo's. */
@@ -58,7 +60,14 @@ export const FOOTER_GROUPS: { title: string; links: Link[] }[] = [
       { label: "Gate", href: "#gate" },
       { label: "Ledger", href: "#ledger" },
       { label: "Pricing", href: PRICING_PATH },
-      { label: "Get started", href: "#get-started" },
+    ],
+  },
+  {
+    title: "Account",
+    links: [
+      { label: "Create an account", href: EARLY_ACCESS_URL },
+      { label: "Sign in", href: "/login" },
+      { label: "Open the console", href: "/app" },
     ],
   },
   {

@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, useLocation } from "react-router";
 import App from "./App";
 import { ConsoleLayout } from "./components/console/ConsoleLayout";
 import { SiteLayout } from "./components/shared/SiteLayout";
@@ -6,7 +6,6 @@ import { AUTH_PATHS } from "./constants/auth";
 import { CONSOLE_PATHS } from "./constants/console";
 import { LEGAL_PATHS } from "./constants/legal";
 import { PRICING_PATH } from "./constants/pricing";
-import { AccountPage } from "./pages/AccountPage";
 import { AdminPage } from "./pages/console/AdminPage";
 import { HoldPage } from "./pages/console/HoldPage";
 import { IntentDetailPage } from "./pages/console/IntentDetailPage";
@@ -15,17 +14,24 @@ import { LedgerPage } from "./pages/console/LedgerPage";
 import { NewIntentPage } from "./pages/console/NewIntentPage";
 import { OverviewPage } from "./pages/console/OverviewPage";
 import { PoliciesPage } from "./pages/console/PoliciesPage";
+import { SettingsPage } from "./pages/console/SettingsPage";
 import { LegalPage } from "./pages/LegalPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PricingPage } from "./pages/PricingPage";
 import { SignupPage } from "./pages/SignupPage";
 import { WaitlistPage } from "./pages/WaitlistPage";
 
+/** /account keeps its query (?billing=success) and hash on the way to the console's settings. */
+function AccountRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: CONSOLE_PATHS.settings, search, hash: hash || (search ? "#plan" : "") }} replace />;
+}
+
 // "/" is the landing page, with its own header and footer; /pricing (linked from
 // the header) and the Terms, Privacy and Refund pages (linked from the footer)
 // borrow them through SiteLayout. The
 // console under /app is a dummy-data preview, reachable by URL only. Both are
-// kept out of search. /login, /signup, /account and /waitlist stand alone,
+// kept out of search. /login, /signup and /waitlist stand alone (/account now redirects to /app/settings),
 // without the header or footer, and sign in with a one-time code: emailed by
 // the sign-in service in api/, or shown on the page by the demo when the build
 // has no service (helpers/auth.ts); /app sends anyone signed out to /login
@@ -44,7 +50,8 @@ export const router = createBrowserRouter([
   },
   { path: AUTH_PATHS.login, element: <LoginPage /> },
   { path: AUTH_PATHS.signup, element: <SignupPage /> },
-  { path: AUTH_PATHS.account, element: <AccountPage /> },
+  // The account moved into the console; old links, emails and Checkout returns still land here.
+  { path: AUTH_PATHS.account, element: <AccountRedirect /> },
   { path: AUTH_PATHS.waitlist, element: <WaitlistPage /> },
   {
     path: CONSOLE_PATHS.overview,
@@ -58,6 +65,7 @@ export const router = createBrowserRouter([
       { path: CONSOLE_PATHS.ledger, element: <LedgerPage /> },
       { path: CONSOLE_PATHS.policies, element: <PoliciesPage /> },
       { path: CONSOLE_PATHS.admin, element: <AdminPage /> },
+      { path: CONSOLE_PATHS.settings, element: <SettingsPage /> },
     ],
   },
   { path: "*", element: <Navigate to="/" replace /> },

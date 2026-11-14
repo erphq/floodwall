@@ -6,6 +6,7 @@
 //   GET  /billing                     the signed-in account's plan (?refresh=1 asks Paygate first)
 //   POST /billing/checkout  { plan, interval }   a Stripe Checkout page for Team or Business
 //   POST /billing/manage              Paygate's hosted billing page: invoices, card, cancel
+//   POST /billing/change    { plan, preview? }  moves a paid plan to the other one (Team ↔ Business)
 //   GET  /billing/promo?code=…        what a discount code takes off, before checkout
 //   GET  /billing/credits             the account's credit, spent on its next invoices
 //   POST /billing/webhook             Paygate's webhooks (signed; no session, no site origin)
@@ -32,6 +33,7 @@ const MAX_WEBHOOK_LENGTH = 256 * 1024;
 type Entitlement = {
   active: boolean;
   plan: string | null;
+  subscription_id?: string | null;
   status: string | null;
   current_period_end?: string | null;
   cancel_at_period_end?: boolean;
@@ -194,6 +196,43 @@ export async function startCheckout(request: Request, env: Env, now: number, ori
   if (refusedCode(answer)) throw new HttpError(400, MESSAGES.badCode);
   if (answer.status !== 200 && answer.status !== 201) paygateFailed("checkout", answer);
   return json({ url: answer.body.url });
+}
+
+/**
+ * Moves the account's subscription to the other paid plan, keeping its billing period. With
+ * `preview` it only asks Stripe what the change would charge now (prorated for the rest of the
+ * period); without it the change happens and the difference is invoiced at once. Free accounts
+ * buy through checkout instead.
+ */
+export async function changePlan(request: Request, env: Env, now: number) {
+  const { id } = await requireMember(request, env, now);
+  const body = await readJson(request);
+  const plan = PAID_PLANS.find((p) => p === body.plan);
+  if (!plan) throw new HttpError(400, MESSAGES.badPlan);
+  const preview = body.preview === true;
+
+  const ent = await paygate(env, "GET", `/entitlements/${encodeURIComponent(id)}`);
+  if (ent.status !== 200) paygateFailed("entitlements", ent);
+  const entitlement = ent.body as Entitlement;
+  if (!entitlement.active || !entitlement.subscription_id) throw new HttpError(409, MESSAGES.noPlanToChange);
+  if (entitlement.plan === plan) throw new HttpError(409, MESSAGES.samePlan);
+
+  const answer = await paygate(env, "POST", `/subscriptions/${encodeURIComponent(entitlement.subscription_id)}/change`, {
+    plan,
+    proration: "always_invoice",
+    preview,
+  });
+  if (answer.status !== 200 && answer.status !== 201) paygateFailed("plan change", answer);
+  if (preview) {
+    const p = answer.body?.preview ?? {};
+    return json({ plan, amountDue: Number(p.amount_due) || 0, currency: p.currency ?? null });
+  }
+  // The webhook follows; store the new plan now so the page shows it straight away.
+  const fresh = await paygate(env, "GET", `/entitlements/${encodeURIComponent(id)}`);
+  if (fresh.status === 200) await storeEntitlement(env, id, fresh.body as Entitlement, now);
+  const row = await planRow(env, id);
+  if (!row) throw new HttpError(401, MESSAGES.signedOut);
+  return json(publicPlan(row));
 }
 
 export async function manageBilling(request: Request, env: Env, now: number) {

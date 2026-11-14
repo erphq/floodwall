@@ -1,18 +1,24 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation } from "react-router";
 import {
+  ArrowUpRight01Icon,
   DashboardSquare02Icon,
+  GithubIcon,
   GitPullRequestIcon,
+  Home03Icon,
   HourglassIcon,
   Link04Icon,
   Logout03Icon,
   SecurityCheckIcon,
+  Settings02Icon,
   UserCheck01Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
+import type { AuthUser } from "../../types/auth";
 import { AUTH_COPY, AUTH_PATHS } from "../../constants/auth";
 import { ADMIN_NAV, CONSOLE_NAV, CONSOLE_PATHS } from "../../constants/console";
-import { accountLabel, loginPath } from "../../helpers/auth";
+import { REPO_URL } from "../../constants/links";
+import { accountInitials, accountLabel, loginPath } from "../../helpers/auth";
 import { cx } from "../../helpers/cx";
 import { useFluidHover, useRegisterFluidHoverItem } from "../../hooks/use-fluid-hover";
 import { usePlane } from "../../hooks/usePlane";
@@ -32,7 +38,18 @@ const NAV_ICONS: Record<string, IconSvgElement> = {
   [CONSOLE_PATHS.ledger]: Link04Icon,
   [CONSOLE_PATHS.policies]: SecurityCheckIcon,
   [CONSOLE_PATHS.admin]: UserCheck01Icon,
+  [CONSOLE_PATHS.settings]: Settings02Icon,
 };
+
+/** The account, as the console's pages get it through the outlet. */
+export type ConsoleContext = {
+  user: AuthUser;
+  updateProfile: (name: string) => Promise<void>;
+  /** Ends the session and leaves for the landing page. Throws if it could not. */
+  signOut: () => Promise<void>;
+};
+
+const SETTINGS_NAV = { to: CONSOLE_PATHS.settings, label: "Settings", end: false };
 
 // The rows touch, so the hover highlight glides from one to the next. The current page is a white
 // ruled cell, the landing page's sheet; the others are open text on the plane.
@@ -55,7 +72,7 @@ function HoldCount() {
   ) : null;
 }
 
-type NavEntry = (typeof CONSOLE_NAV)[number] | typeof ADMIN_NAV;
+type NavEntry = (typeof CONSOLE_NAV)[number] | typeof ADMIN_NAV | typeof SETTINGS_NAV;
 
 type NavItemProps = { index: number; registerItem: (index: number, element: HTMLElement | null) => void } & NavEntry;
 
@@ -80,11 +97,11 @@ function NavItem({ index, registerItem, to, label, end }: NavItemProps) {
   );
 }
 
-function ConsoleNav({ items }: { items: NavEntry[] }) {
+function ConsoleNav({ items, label = "Console", className }: { items: NavEntry[]; label?: string; className?: string }) {
   const listRef = useRef<HTMLUListElement>(null);
   const hover = useFluidHover(listRef, { axis: "y" });
   return (
-    <nav aria-label="Console" className="min-w-0 console-narrow:order-last console-narrow:w-full">
+    <nav aria-label={label} className={cx("min-w-0", className)}>
       <ul
         ref={listRef}
         {...hover.handlers}
@@ -106,10 +123,11 @@ function ConsoleNav({ items }: { items: NavEntry[] }) {
  * as a full page load would.
  */
 export function ConsoleLayout() {
-  const { session, refresh, signOut } = useSession();
+  const { session, refresh, updateProfile, signOut } = useSession();
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
   const firstPath = useRef(true);
+  const [leaving, setLeaving] = useState(false);
   const [signOutFailed, setSignOutFailed] = useState(false);
 
   useEffect(() => {
@@ -120,11 +138,27 @@ export function ConsoleLayout() {
     mainRef.current?.focus();
   }, [location.pathname]);
 
-  if (session.status === "loading") return null;
+  // Signing out leaves the console for the landing page (a full load: it renders without the router).
+  const leave = useCallback(async () => {
+    setLeaving(true);
+    setSignOutFailed(false);
+    try {
+      await signOut();
+      window.location.assign("/");
+    } catch (error) {
+      setLeaving(false);
+      setSignOutFailed(true);
+      throw error;
+    }
+  }, [signOut]);
+
+  if (session.status === "loading" || leaving) return null;
   if (session.status === "unavailable") return <SessionUnavailable onRetry={refresh} />;
-  if (session.status === "signedOut") return <Navigate to={loginPath(location.pathname + location.search)} replace />;
+  if (session.status === "signedOut") return <Navigate to={loginPath(location.pathname + location.search + location.hash)} replace />;
   if (session.user.waiting) return <Navigate to={AUTH_PATHS.waitlist} replace />;
-  const nav = session.user.admin ? [...CONSOLE_NAV, ADMIN_NAV] : CONSOLE_NAV;
+  const { user } = session;
+  const nav = user.admin ? [...CONSOLE_NAV, ADMIN_NAV] : CONSOLE_NAV;
+  const context: ConsoleContext = { user, updateProfile, signOut: leave };
 
   return (
     <PlaneProvider>
@@ -144,22 +178,46 @@ export function ConsoleLayout() {
             "console-narrow:border-r-0 console-narrow:border-b console-narrow:px-4 console-narrow:py-3",
           )}
         >
-          <Link className="inline-flex items-center gap-2.5 px-3 text-lg leading-none font-medium tracking-[-0.03em] text-ink console-narrow:px-0" to="/">
+          <Link className="inline-flex items-center gap-2.5 px-3 text-lg leading-none font-medium tracking-[-0.03em] text-ink console-narrow:px-0" to={CONSOLE_PATHS.overview}>
             <BrandMark className="size-6" />
             <span>Floodwall</span>
           </Link>
-          <ConsoleNav items={nav} />
+          <ConsoleNav items={nav} className="console-narrow:order-last console-narrow:w-full" />
           <div className="mt-auto flex flex-col gap-4 console-narrow:mt-0 console-narrow:ml-auto">
+            <div className="flex flex-col console-narrow:hidden">
+              <ConsoleNav items={[SETTINGS_NAV]} label="Account" />
+              <ul className="flex flex-col" aria-label="Elsewhere">
+                <li>
+                  <a className={cx(NAV_LINK, "border-transparent text-muted hover:text-ink")} href="/">
+                    <Icon icon={Home03Icon} size={16} />
+                    <span>floodwall.ai</span>
+                  </a>
+                </li>
+                <li>
+                  <a className={cx(NAV_LINK, "border-transparent text-muted hover:text-ink")} href={REPO_URL}>
+                    <Icon icon={GithubIcon} size={16} />
+                    <span>The crate</span>
+                    <Icon icon={ArrowUpRight01Icon} size={14} className="ml-auto" />
+                  </a>
+                </li>
+              </ul>
+            </div>
             <p className="px-3 text-xs leading-normal text-muted console-narrow:hidden">
-              Dummy data. Nothing here touches a real plane.
+              Example data. Nothing here touches a real plane.
             </p>
             <div className="flex items-center gap-2 border-t border-line pt-3 console-narrow:border-t-0 console-narrow:pt-0">
               <Link
-                className="min-w-0 flex-1 truncate px-3 text-sm font-medium text-ink hover:underline console-narrow:hidden"
-                to={AUTH_PATHS.account}
-                title={session.user.email}
+                className="flex min-w-0 flex-1 items-center gap-2.5 px-3 hover:[&_.who]:underline console-narrow:px-0"
+                to={CONSOLE_PATHS.settings}
+                title={user.email}
+                aria-label={`Settings and billing, ${accountLabel(user)}`}
               >
-                {accountLabel(session.user)}
+                <span className="grid size-7 shrink-0 place-items-center bg-action text-[11px] font-semibold text-action-text">
+                  {accountInitials(user)}
+                </span>
+                <span className="who min-w-0 truncate text-sm font-medium text-ink underline-offset-4 console-narrow:hidden">
+                  {accountLabel(user)}
+                </span>
               </Link>
               <ConsoleThemeToggle />
               <button
@@ -167,10 +225,7 @@ export function ConsoleLayout() {
                 className={FOOTER_BUTTON}
                 aria-label={AUTH_COPY.signOut}
                 title={AUTH_COPY.signOut}
-                onClick={() => {
-                  setSignOutFailed(false);
-                  signOut().catch(() => setSignOutFailed(true));
-                }}
+                onClick={() => void leave().catch(() => undefined)}
               >
                 <Icon icon={Logout03Icon} size={16} />
               </button>
@@ -186,7 +241,7 @@ export function ConsoleLayout() {
           tabIndex={-1}
           className="flex w-full max-w-[1200px] flex-col gap-6 px-10 pt-6 pb-16 console-narrow:px-4 console-narrow:pt-3 console-narrow:pb-12 [&_code]:font-mono [&_code]:text-[13px]"
         >
-          <Outlet />
+          <Outlet context={context} />
         </main>
       </div>
     </PlaneProvider>

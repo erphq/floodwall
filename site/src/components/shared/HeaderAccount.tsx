@@ -55,19 +55,50 @@ export function HeaderAccount() {
     }
   }
 
-  if (session.status === "loading") return <div className="nav-account" data-state="loading" />;
+  // The bar's one solid button: Get started for a visitor, Open console (or the waitlist) once
+  // signed in. While the service answers it keeps its place, unseen.
+  const primary =
+    session.status === "signedIn"
+      ? session.user.waiting
+        ? { label: COPY.waitlist, href: AUTH_PATHS.waitlist }
+        : { label: COPY.console, href: CONSOLE_PATHS.overview }
+      : { label: COPY.getStarted, href: AUTH_PATHS.signup };
+  const primaryButton = (
+    <a
+      className="button button-sm nav-primary"
+      href={primary.href}
+      data-state={session.status}
+      aria-hidden={session.status === "loading" || undefined}
+      tabIndex={session.status === "loading" ? -1 : undefined}
+    >
+      {primary.label}
+    </a>
+  );
+
+  if (session.status === "loading") {
+    return (
+      <>
+        <div className="nav-account" data-state="loading" />
+        {primaryButton}
+      </>
+    );
+  }
   if (session.status !== "signedIn") {
     return (
-      <div className="nav-account" data-state="signed-out">
-        <a ref={signInRef} className="nav-sign-in" href={AUTH_PATHS.login}>
-          {COPY.signIn}
-        </a>
-      </div>
+      <>
+        <div className="nav-account" data-state="signed-out">
+          <a ref={signInRef} className="nav-sign-in" href={AUTH_PATHS.login}>
+            {COPY.signIn}
+          </a>
+        </div>
+        {primaryButton}
+      </>
     );
   }
 
   const { user } = session;
   return (
+    <>
     <div className="nav-account" data-state="signed-in" ref={slotRef} onBlur={onBlur}>
       <button
         ref={buttonRef}
@@ -91,7 +122,7 @@ export function HeaderAccount() {
             </p>
             <ul className="nav-account-links">
               <li>
-                <a href={AUTH_PATHS.account}>{COPY.account}</a>
+                <a href={CONSOLE_PATHS.settings}>{COPY.account}</a>
               </li>
               <li>
                 {/* A waiting account's console is the waitlist page, so the menu says so. */}
@@ -116,5 +147,7 @@ export function HeaderAccount() {
         )}
       </AnimatePresence>
     </div>
+    {primaryButton}
+    </>
   );
 }

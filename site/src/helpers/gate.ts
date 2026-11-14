@@ -50,3 +50,20 @@ export function parseReplicas(value: string): string | null {
   const n = Number(trimmed);
   return trimmed !== "" && Number.isInteger(n) && n >= 0 ? String(n) : null;
 }
+
+/** The policy that sent `intent` to the hold queue, and its reason, if one did. */
+export function deferral(intent: Intent): PolicyResult | undefined {
+  return intent.verdicts?.find((v) => v.verdict === "defer");
+}
+
+/** How often each policy has admitted, deferred and rejected, across every gated intent. */
+export function policyActivity(intents: Intent[]): Record<string, Record<Verdict, number>> {
+  const counts: Record<string, Record<Verdict, number>> = {};
+  for (const { verdicts } of intents) {
+    for (const { policy, verdict } of verdicts ?? []) {
+      counts[policy] ??= { admit: 0, defer: 0, reject: 0 };
+      counts[policy][verdict] += 1;
+    }
+  }
+  return counts;
+}

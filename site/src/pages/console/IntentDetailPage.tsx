@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { ConsoleBackLink } from "../../components/console/ConsoleBackLink";
 import { ConsoleBadge } from "../../components/console/ConsoleBadge";
 import { ConsoleEmpty } from "../../components/console/ConsoleEmpty";
+import { ConsoleFacts } from "../../components/console/ConsoleFacts";
 import { ConsoleIntentSteps } from "../../components/console/ConsoleIntentSteps";
 import { ConsolePageHeader } from "../../components/console/ConsolePageHeader";
 import { ConsolePanel } from "../../components/console/ConsolePanel";
@@ -11,6 +11,10 @@ import { describeAction } from "../../helpers/gate";
 import { usePlane } from "../../hooks/usePlane";
 import { cx } from "../../helpers/cx";
 import { consoleGrow, consoleLink, consoleList, consoleMono, consoleRow, monoLabel } from "../../styles/classes";
+import type { Action } from "../../types/console";
+
+/** What an action's detail means for its kind: a manifest name for apply, a replica count for scale. */
+const DETAIL_LABEL: Partial<Record<Action["kind"], string>> = { apply: "Manifest", scale: "Replicas" };
 
 export function IntentDetailPage() {
   const { id } = useParams();
@@ -40,6 +44,12 @@ export function IntentDetailPage() {
     { label: "Submitted", value: `tick ${intent.submittedAt}` },
     ...(intent.releasedBy ? [{ label: "Released by", value: intent.releasedBy }] : []),
   ];
+  const detailLabel = DETAIL_LABEL[intent.action.kind];
+  const action = [
+    { label: "Kind", value: intent.action.kind },
+    { label: "Resource", value: intent.action.resource },
+    ...(detailLabel ? [{ label: detailLabel, value: intent.action.detail ?? "not set" }] : []),
+  ];
 
   return (
     <>
@@ -51,6 +61,17 @@ export function IntentDetailPage() {
       />
 
       <ConsoleFacts facts={facts} />
+
+      <ConsolePanel title="Action" flush>
+        <dl className="divide-y divide-line">
+          {action.map(({ label, value }) => (
+            <div key={label} className={consoleRow}>
+              <dt className={cx(monoLabel, "w-28 shrink-0")}>{label}</dt>
+              <dd className={cx(consoleGrow, consoleMono, "text-ink")}>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </ConsolePanel>
 
       <ConsolePanel title="Gate verdicts" flush action="Harshest verdict wins">
         {intent.verdicts ? (
@@ -70,43 +91,44 @@ export function IntentDetailPage() {
         )}
       </ConsolePanel>
 
-      <ConsolePanel title="Ledger history" flush>
-        {history.length ? (
-          <ul className={consoleList}>
-            {history.map((r) => (
-              <li key={r.seq} className={consoleRow}>
-                <span className={cx(consoleMono, "w-8 shrink-0 text-muted")}>#{r.seq}</span>
-                <span className={consoleGrow}>
-                  <span className="font-medium text-ink">{r.kind}</span>
-                  <span className="text-muted"> · {r.summary}</span>
-                </span>
-                <span className={cx(consoleMono, "text-muted")}>tick {r.tick}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <ConsoleEmpty title="Nothing recorded yet">The ledger records this intent once the gate rules on it.</ConsoleEmpty>
-        )}
+      <ConsolePanel
+        title="Timeline"
+        flush
+        action={
+          <Link className={consoleLink} to={CONSOLE_PATHS.ledger}>
+            Open ledger
+          </Link>
+        }
+      >
+        <ol className={consoleList}>
+          <li className={consoleRow}>
+            <span className={cx(consoleMono, "w-10 shrink-0 text-muted")} aria-hidden="true" />
+            <span className={consoleGrow}>
+              <span className="font-medium text-ink">Submitted at tick {intent.submittedAt}</span>
+              <span className="text-muted"> · by {intent.agent}</span>
+            </span>
+          </li>
+          {history.map((r) => (
+            <li key={r.seq} className={consoleRow}>
+              <span className={cx(consoleMono, "w-10 shrink-0 text-muted")}>#{r.seq}</span>
+              <span className={consoleGrow}>
+                <span className="font-medium text-ink">{TIMELINE_LABEL[r.kind]}</span>
+                <span className="text-muted"> · {r.summary}</span>
+              </span>
+              {r.verdict && <ConsoleBadge value={r.verdict} />}
+              <span className={cx(consoleMono, "text-muted")}>tick {r.tick}</span>
+            </li>
+          ))}
+          {history.length === 0 && (
+            <li className={cx(consoleRow, "text-sm text-muted")}>
+              <span className="w-10 shrink-0" aria-hidden="true" />
+              <span className={consoleGrow}>Nothing on the ledger yet. It records this intent once the gate rules on it.</span>
+            </li>
+          )}
+        </ol>
       </ConsolePanel>
     </>
   );
 }
 
-/**
- * The intent's facts in one ruled frame, the Overview figures' title-block cells. Each cell draws its
- * own right and bottom rule and the frame clips the outermost, so a short last row leaves no gap.
- */
-function ConsoleFacts({ facts }: { facts: { label: string; value: ReactNode }[] }) {
-  return (
-    <div className="overflow-hidden border border-line bg-surface">
-      <dl className="-me-px -mb-px grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
-        {facts.map(({ label, value }) => (
-          <div key={label} className="flex min-w-0 flex-col gap-2 border-e border-b border-line px-5 py-4 console-narrow:px-4">
-            <dt className={monoLabel}>{label}</dt>
-            <dd className="text-[15px] font-medium text-ink">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
+const TIMELINE_LABEL = { decision: "Gate decision", release: "Released", expiry: "Expired", outcome: "Outcome reported" } as const;

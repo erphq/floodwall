@@ -2,7 +2,7 @@
 // and sweeps expired rows on its daily schedule.
 
 import { approveUser, grantCredit, listUsers, removeUser } from "./admin";
-import { currentCredits, currentPlan, lookupCode, manageBilling, receiveWebhook, startCheckout } from "./billing";
+import { currentCredits, currentPlan, lookupCode, changePlan, manageBilling, receiveWebhook, startCheckout } from "./billing";
 import { currentSession, sendCode, signOut, sweep, updateProfile, verifyCode } from "./auth";
 import type { Env } from "./env";
 import { allowedOrigin, HttpError, json, preflight, withCors } from "./http";
@@ -40,6 +40,8 @@ async function route(request: Request, env: Env, origin: string | null) {
       return currentPlan(request, env, now);
     case "POST /billing/checkout":
       return startCheckout(request, env, now, origin!);
+    case "POST /billing/change":
+      return changePlan(request, env, now);
     case "POST /billing/manage":
       return manageBilling(request, env, now);
     case "GET /billing/promo":

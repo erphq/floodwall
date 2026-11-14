@@ -2,7 +2,6 @@ import { useCallback, useId, useLayoutEffect, useRef, useState, type RefObject }
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowDown01Icon,
-  ArrowUpRight01Icon,
   FlowConnectionIcon,
   GithubIcon,
   Layers01Icon,
@@ -44,8 +43,9 @@ function NavItemBox({ index, registerItem, label }: { index: number; registerIte
 
 /**
  * The sticky header on the landing page and the pages in SiteLayout: the logo (which goes home), a
- * "How it works" menu over the sections that explain the wall, then Roadmap, Pricing and Sign up,
- * and at the right the account (Sign in, or who is signed in: HeaderAccount) and the GitHub button.
+ * "How it works" menu over the sections that explain the wall, then Roadmap and Pricing, and at the
+ * right the GitHub link and the account: Sign in and Get started, or who is signed in and Open
+ * console (HeaderAccount).
  * One hover highlight glides between the top-level items, and another between the panel's sections.
  * On the landing page the current item follows the section in view; off it (`onLanding` false)
  * `page` names the current item (Pricing on /pricing, none on the legal pages) and section links
@@ -187,12 +187,10 @@ export function SiteHeader({ onLanding = true, page }: { onLanding?: boolean; pa
           <span className="nav-indicator" ref={indicatorRef} aria-hidden="true" />
         </div>
         <div className="nav-actions">
-          <HeaderAccount />
-          <a className="button button-sm nav-crate" href={REPO_URL}>
-            <Icon icon={GithubIcon} size={16} className="button-brand" />
-            <span className="nav-crate-label">View the Crate</span>
-            <Icon icon={ArrowUpRight01Icon} size={16} className="button-arrow" />
+          <a className="nav-github" href={REPO_URL} aria-label="View the Crate on GitHub" title="View the Crate on GitHub">
+            <Icon icon={GithubIcon} size={18} />
           </a>
+          <HeaderAccount />
         </div>
       </nav>
     </header>

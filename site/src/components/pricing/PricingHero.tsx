@@ -3,21 +3,23 @@ import { EARLY_ACCESS_URL, REPO_URL } from "../../constants/links";
 import { ENTERPRISE_PLAN, PRICING_PLANS } from "../../constants/pricing";
 import { LandingSectionHeading } from "../landing/LandingSectionHeading";
 import { Icon } from "../shared/Icon";
-import { AUTH_PATHS } from "../../constants/auth";
+import { CONSOLE_PATHS } from "../../constants/console";
 import { BILLING_COPY } from "../../constants/billing";
 import { useEffect } from "react";
-import { billingAvailable, codeFromPage } from "../../helpers/billing";
+import { codeFromPage } from "../../helpers/billing";
 import { useBilling } from "../../hooks/useBilling";
 import { useSession } from "../../hooks/useSession";
 import type { PricingPlan } from "../../constants/pricing";
 import { DiscountCodeField } from "../billing/DiscountCodeField";
 import { type PlanAction, PricingPlanCard } from "./PricingPlanCard";
 
+const SETTINGS_PLAN = `${CONSOLE_PATHS.settings}#plan`;
+
 /** The opening sheet: the offer, the four plans in one ruled rail, and Enterprise across their foot. */
 export function PricingHero() {
   const { session } = useSession();
   const member = session.status === "signedIn" && !session.user.waiting;
-  const billing = useBilling(member && billingAvailable);
+  const billing = useBilling(member);
   // A link like /pricing?code=LAUNCH20 keeps its code for the tab, through sign-up and sign-in, until
   // checkout; a signed-in account on Free sees it applied below the plans.
   useEffect(() => void codeFromPage(), []);
@@ -28,10 +30,11 @@ export function PricingHero() {
     if (!member || !billing.plan) return { kind: "link" };
     const current = billing.plan.plan;
     if (plan.planKey === current || (plan.name === "Free" && current === "free")) return { kind: "current" };
-    // Already paying: changing plan goes through the account page.
+    // Already paying: switching plan or cancelling happens in the console's settings.
     if (current !== "free") {
-      const sold = plan.planKey || plan.name === "Free";
-      return sold ? { kind: "link", cta: { label: BILLING_COPY.manage, href: AUTH_PATHS.account } } : { kind: "link" };
+      if (plan.planKey) return { kind: "link", cta: { label: BILLING_COPY.switchTo(plan.planKey), href: SETTINGS_PLAN } };
+      if (plan.name === "Free") return { kind: "link", cta: { label: BILLING_COPY.manage, href: SETTINGS_PLAN } };
+      return { kind: "link" };
     }
     if (!plan.planKey) return { kind: "link" };
     const key = plan.planKey;
