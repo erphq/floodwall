@@ -29,4 +29,14 @@ export const BILLING_COPY = {
   demo: "Billing needs the sign-in service; this is the in-browser demo.",
   current: "Your plan",
   signInToBuy: "Sign in to upgrade",
+  code: {
+    label: "Discount code",
+    apply: "Apply",
+    checking: "Checking…",
+    remove: "Remove",
+    applied: (code: string, summary: string | null) => `${code} applied${summary ? `: ${summary}` : ""}.`,
+    atCheckout: "It comes off at checkout.",
+  },
+  credit: (amount: string) => `Credit ${amount}`,
+  creditNote: "Used on your next invoices before your card is charged.",
 };

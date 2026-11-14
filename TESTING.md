@@ -59,7 +59,12 @@ send a test webhook. Then:
    **Ends <date>** and returns to Free when the period ends (advance a test clock on Paygate's
    **Testing** page to see it).
 5. A declined card (`4000 0000 0000 0002`) sends `payment.failed`: the owner gets an email.
-6. Paygate's **Webhooks to apps** shows every delivery and lets you resend one; a resend is
+6. Discount code: make a test coupon with a code in Paygate (Apps → floodwall → Discounts), open
+   `/pricing?code=<CODE>` signed in on Free: the code shows as applied under the plans, and Stripe
+   Checkout opens with it taken off. A wrong code says it isn't valid.
+7. Credit: as an admin, give an account $10 at `/app/admin`; its `/account` shows **Credit $10.00**,
+   and its next invoice is $10 less.
+8. Paygate's **Webhooks to apps** shows every delivery and lets you resend one; a resend is
    answered `duplicate: true` and changes nothing.
 
 ## 3. Site
@@ -88,7 +93,10 @@ Smoke test, in a private window:
 5. Pay with the 4242 test card (the service holds a `pg_sk_test_…` key, so nothing is charged),
    come back to `/account`, see **Team**.
 6. Open the billing page, cancel, check the account shows the end date.
-7. Sign out; `/account` sends you to `/login`.
+7. `/terms`, `/privacy` and `/refunds` open (also linked from the footer and the sign-up page).
+8. Sign out; `/account` sends you to `/login`.
 
-Going live is swapping the Worker's Paygate key and webhook secret for live ones
-(`npx wrangler secret put …`), after the Terms, Privacy and Refund pages are up (FW-605).
+Going live is swapping the Worker's Paygate key and webhook secret for the live ones
+(`npx wrangler secret put …`; both are in Box, `erp-ai/floodwall/paygate/secret-keys.env`), once
+testing on the sandbox is done. Paygate's live mode already has the ERP.AI MA LLC Stripe account,
+the four live prices and the webhook URL, and the Terms, Privacy and Refund pages are up (FW-605).

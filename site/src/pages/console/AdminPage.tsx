@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
+import { AdminCreditPanel } from "../../components/console/AdminCreditPanel";
 import { ConsoleBadge } from "../../components/console/ConsoleBadge";
 import { ConsoleButton } from "../../components/console/ConsoleButton";
 import { ConsoleEmpty } from "../../components/console/ConsoleEmpty";
@@ -19,9 +20,10 @@ const STATUS_TONE: Record<AdminAccount["status"], string> = { waiting: "warn", a
 
 /**
  * The waitlist for admins: every account, the waiting ones first, with
- * Approve and Remove. The service refuses anyone who isn't an admin, and the
- * page shows its answer. While sign-up is open nobody waits, so the page
- * opens on All instead of Waiting.
+ * Approve and Remove, and below it a form to give an account credit. The
+ * service refuses anyone who isn't an admin, and the page shows its answer.
+ * While sign-up is open nobody waits, so the page opens on All instead of
+ * Waiting.
  */
 export function AdminPage() {
   const [params, setParams] = useSearchParams();
@@ -156,6 +158,10 @@ export function AdminPage() {
           </ConsoleTable>
         )}
       </ConsolePanel>
+
+      {listing && (
+        <AdminCreditPanel emails={listing.users.filter((u) => u.status === "approved").map((u) => u.email)} />
+      )}
     </>
   );
 }

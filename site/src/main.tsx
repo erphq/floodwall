@@ -10,6 +10,7 @@ import "./styles/landing/hero.css";
 import "./styles/landing/sections.css";
 import "./styles/landing/footer.css";
 import "./styles/landing/pricing.css";
+import "./styles/landing/legal.css";
 
 const root = document.getElementById("root")!;
 const app = (

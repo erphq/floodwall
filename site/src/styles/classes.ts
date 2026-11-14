@@ -23,6 +23,10 @@ export const pillOutline = `${buttonBase} border border-line-strong bg-surface t
 /** The sign-in form or account details: one row of the sign-in sheet, so it adds no frame of its own. */
 export const authCard = "gap-5 rounded-none border-0 bg-transparent py-0 text-base text-ink ring-0";
 
+/** A text field on the sign-in sheets: square, ruled, the base size on every screen. */
+export const authInput =
+  "h-11 rounded-none border-line-strong bg-surface px-3.5 text-base text-ink md:text-base focus-visible:border-ink focus-visible:ring-0";
+
 /** The note that says the code is a demo: a ruled band, neutral, since it is not an outcome. */
 export const authNote = "border border-line bg-subtle px-4 py-3 font-mono text-xs leading-normal text-ink";
 

@@ -46,7 +46,8 @@ export const AUTH_COPY = {
     title: "Gate your first agent change.",
     lead: "Create your free account, then open the console with a plane of example intents. No credit card or API key is needed to try it.",
     note: "We will email you a six-digit sign-in code. There is no password. Your account starts on the Free plan.",
-    terms: "Creating an account means you accept the terms. The privacy notice lists what we store.",
+    /** Read around two links: the Terms of Service, then the Privacy Policy. */
+    terms: ["Creating an account means you accept the ", "Terms of Service", ". The ", "Privacy Policy", " lists what we store."],
     switchPrompt: "Already have an account?",
     switchLink: "Sign in",
   },

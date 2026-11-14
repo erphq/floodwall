@@ -43,16 +43,17 @@ function NavItemBox({ index, registerItem, label }: { index: number; registerIte
 }
 
 /**
- * The sticky header on the landing page and /pricing: the logo (which goes home), a "How it works"
- * menu over the sections that explain the wall, then Roadmap, Pricing and Sign up, and at the
- * right the account (Sign in, or who is signed in: HeaderAccount) and the GitHub button. One hover
- * highlight glides between the top-level items, and another between the panel's sections. On the
- * landing page the current item follows the section in view; /pricing (`onLanding` false) is the
- * only other page with this header, so there Pricing is current and section links lead to "/#…".
+ * The sticky header on the landing page and the pages in SiteLayout: the logo (which goes home), a
+ * "How it works" menu over the sections that explain the wall, then Roadmap, Pricing and Sign up,
+ * and at the right the account (Sign in, or who is signed in: HeaderAccount) and the GitHub button.
+ * One hover highlight glides between the top-level items, and another between the panel's sections.
+ * On the landing page the current item follows the section in view; off it (`onLanding` false)
+ * `page` names the current item (Pricing on /pricing, none on the legal pages) and section links
+ * lead to "/#…".
  */
-export function SiteHeader({ onLanding = true }: { onLanding?: boolean }) {
+export function SiteHeader({ onLanding = true, page }: { onLanding?: boolean; page?: string }) {
   const tracked = useActiveSection(NAV_SECTION_IDS);
-  const current: string = onLanding ? tracked : "pricing";
+  const current: string = onLanding ? tracked : (page ?? "");
   const base = onLanding ? "" : "/";
 
   const [menuOpen, setMenuOpen] = useState(false);

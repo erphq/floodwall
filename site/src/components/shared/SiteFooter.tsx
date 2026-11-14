@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Moon02Icon, PauseIcon, PlayIcon, Sun01Icon } from "@hugeicons/core-free-icons";
-import { FOOTER_GROUPS, PROTO_URL } from "../../constants/links";
+import { FOOTER_GROUPS, FOOTER_LEGAL_LINKS, PROTO_URL } from "../../constants/links";
 import { useClientValue } from "../../hooks/useClientValue";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useTheme } from "../../hooks/useTheme";
@@ -99,6 +99,12 @@ export function SiteFooter({ onLanding = true }: { onLanding?: boolean }) {
             An <a href="https://www.erp.ai">ERP•AI</a>{" "}
             project · Built with{" "}
             <a href={PROTO_URL}>Proto</a>
+            {FOOTER_LEGAL_LINKS.map(({ label, href }) => (
+              <Fragment key={href}>
+                {" · "}
+                <a href={href}>{label}</a>
+              </Fragment>
+            ))}
           </span>
           <button className="footer-control footer-motion-control" type="button" disabled={!hydrated || reducedMotion}
             aria-label={reducedMotion ? "Footer animation disabled for reduced motion" : paused ? "Resume footer animation" : "Pause footer animation"}

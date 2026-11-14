@@ -54,5 +54,7 @@ export const MESSAGES = {
   billingUnavailable: "Billing is not available right now. Please try again later.",
   alreadySubscribed: "You already have a plan. Manage it from Billing on your account page.",
   noBilling: "You have no billing history yet. Choose a plan first.",
+  badCode: "That code isn't valid. Check it for typos, or ask us for a new one.",
+  badCredit: "Give credit as a whole number of dollars, from $1 to $10,000.",
   broken: "Something went wrong. Please try again.",
 };

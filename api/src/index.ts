@@ -1,8 +1,8 @@
 // The Worker: routes each request, lets the allowed sites read the answer,
 // and sweeps expired rows on its daily schedule.
 
-import { approveUser, listUsers, removeUser } from "./admin";
-import { currentPlan, manageBilling, receiveWebhook, startCheckout } from "./billing";
+import { approveUser, grantCredit, listUsers, removeUser } from "./admin";
+import { currentCredits, currentPlan, lookupCode, manageBilling, receiveWebhook, startCheckout } from "./billing";
 import { currentSession, sendCode, signOut, sweep, updateProfile, verifyCode } from "./auth";
 import type { Env } from "./env";
 import { allowedOrigin, HttpError, json, preflight, withCors } from "./http";
@@ -34,12 +34,18 @@ async function route(request: Request, env: Env, origin: string | null) {
       return approveUser(request, env, now, origin!);
     case "POST /admin/remove":
       return removeUser(request, env, now);
+    case "POST /admin/credit":
+      return grantCredit(request, env, now);
     case "GET /billing":
       return currentPlan(request, env, now);
     case "POST /billing/checkout":
       return startCheckout(request, env, now, origin!);
     case "POST /billing/manage":
       return manageBilling(request, env, now);
+    case "GET /billing/promo":
+      return lookupCode(request, env, now);
+    case "GET /billing/credits":
+      return currentCredits(request, env, now);
   }
   throw new HttpError(404, MESSAGES.notFound);
 }

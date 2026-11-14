@@ -6,7 +6,12 @@
 //   GET  /billing                     the signed-in account's plan (?refresh=1 asks Paygate first)
 //   POST /billing/checkout  { plan, interval }   a Stripe Checkout page for Team or Business
 //   POST /billing/manage              Paygate's hosted billing page: invoices, card, cancel
+//   GET  /billing/promo?code=…        what a discount code takes off, before checkout
+//   GET  /billing/credits             the account's credit, spent on its next invoices
 //   POST /billing/webhook             Paygate's webhooks (signed; no session, no site origin)
+//
+// Discount codes are made in Paygate (the app's Discounts tab); credit is granted by an admin
+// (POST /admin/credit in admin.ts) and is Stripe's customer balance.
 
 import { sessionAccount } from "./auth";
 import type { Env } from "./env";
@@ -60,14 +65,29 @@ function secretKey(env: Env) {
   return env.PAYGATE_SECRET_KEY;
 }
 
-/** One call to Paygate's app API. Returns the status and parsed body; a network failure is a 502. */
-async function paygate(env: Env, method: string, path: string, body?: unknown) {
+/** A discount code as the site may send it: letters, digits, dashes and underscores. */
+const CODE_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+
+/** The code in `value`, trimmed, or null when there is none; a malformed one is a 400. */
+export function discountCode(value: unknown) {
+  if (value === undefined || value === null || value === "") return null;
+  const code = typeof value === "string" ? value.trim() : "";
+  if (!CODE_PATTERN.test(code)) throw new HttpError(400, MESSAGES.badCode);
+  return code;
+}
+
+/**
+ * One call to Paygate's app API. Returns the status and parsed body; a network failure is a 502.
+ * A call with a body carries an Idempotency-Key: `idempotencyKey` when the caller has one to
+ * repeat on a retry, otherwise a new one.
+ */
+export async function paygate(env: Env, method: string, path: string, body?: unknown, idempotencyKey?: string) {
   const key = secretKey(env);
   const headers: Record<string, string> = { Authorization: `Bearer ${key}` };
   if (body !== undefined) {
     headers["Content-Type"] = "application/json";
-    // Paygate replays the first answer to a repeated key; each call here is a new intent.
-    headers["Idempotency-Key"] = crypto.randomUUID();
+    // Paygate replays the first answer to a repeated key.
+    headers["Idempotency-Key"] = idempotencyKey ?? crypto.randomUUID();
   }
   let response: Response;
   try {
@@ -90,7 +110,7 @@ async function paygate(env: Env, method: string, path: string, body?: unknown) {
   return { status: response.status, body: parsed };
 }
 
-function paygateFailed(what: string, answer: { status: number; body: any }): never {
+export function paygateFailed(what: string, answer: { status: number; body: any }): never {
   console.error(`paygate: ${what} refused`, answer.status, JSON.stringify(answer.body?.error ?? null).slice(0, 300));
   throw new HttpError(502, MESSAGES.billingUnavailable);
 }
@@ -155,12 +175,14 @@ export async function startCheckout(request: Request, env: Env, now: number, ori
   const plan = PAID_PLANS.find((p) => p === body.plan);
   const interval = INTERVALS.find((i) => i === (body.interval ?? "month"));
   if (!plan || !interval) throw new HttpError(400, MESSAGES.badPlan);
+  const code = discountCode(body.code);
 
   const answer = await paygate(env, "POST", "/checkout", {
     customer: { external_id: id, email: user.email },
     plan,
     interval,
-    allow_promotion_codes: true,
+    // A code chosen on the site is applied up front; without one, Checkout offers a box for it.
+    ...(code ? { promotion_code: code } : { allow_promotion_codes: true }),
     // Back to the site the reader came from: one of ALLOWED_ORIGINS.
     success_url: `${origin}/account?billing=success`,
     cancel_url: `${origin}/pricing`,
@@ -169,6 +191,7 @@ export async function startCheckout(request: Request, env: Env, now: number, ori
   if (answer.status === 409 && answer.body?.error?.code === "already_subscribed") {
     throw new HttpError(409, MESSAGES.alreadySubscribed);
   }
+  if (refusedCode(answer)) throw new HttpError(400, MESSAGES.badCode);
   if (answer.status !== 200 && answer.status !== 201) paygateFailed("checkout", answer);
   return json({ url: answer.body.url });
 }
@@ -179,6 +202,39 @@ export async function manageBilling(request: Request, env: Env, now: number) {
   if (answer.status === 404) throw new HttpError(404, MESSAGES.noBilling);
   if (answer.status !== 200 && answer.status !== 201) paygateFailed("billing link", answer);
   return json({ url: answer.body.url });
+}
+
+const refusedCode = (answer: { status: number; body: any }) =>
+  answer.status === 400 && answer.body?.error?.code === "invalid_promotion_code";
+
+/** What a discount code takes off ("20% off for 3 months"), so the site can show it before checkout. */
+export async function lookupCode(request: Request, env: Env, now: number) {
+  await requireMember(request, env, now);
+  const code = discountCode(new URL(request.url).searchParams.get("code"));
+  if (!code) throw new HttpError(400, MESSAGES.badCode);
+  const answer = await paygate(env, "GET", `/promotion-codes/${encodeURIComponent(code)}`);
+  if (refusedCode(answer) || answer.status === 404) throw new HttpError(400, MESSAGES.badCode);
+  if (answer.status !== 200) paygateFailed("promotion code", answer);
+  return json({ code: answer.body.code as string, summary: (answer.body.coupon?.summary ?? null) as string | null });
+}
+
+/** One line of the account's credit history: what was granted or spent, in cents. */
+type CreditLine = { amount: number; description: string | null; created: string | null };
+
+/** The account's credit: Stripe spends it on the next invoices before charging the card. */
+export async function currentCredits(request: Request, env: Env, now: number) {
+  const { id } = await requireMember(request, env, now);
+  const answer = await paygate(env, "GET", `/customers/${encodeURIComponent(id)}/credits?limit=10`);
+  // No Paygate customer yet: never bought or been given anything.
+  if (answer.status === 404) return json({ credit: 0, currency: null, history: [] });
+  if (answer.status !== 200) paygateFailed("credits", answer);
+  const history: CreditLine[] = (answer.body.transactions ?? []).map((t: any) => ({
+    // Stripe counts credit as a negative balance; the site shows what was added as positive.
+    amount: -Number(t.amount),
+    description: t.description ?? null,
+    created: t.created ?? null,
+  }));
+  return json({ credit: Math.max(0, Number(answer.body.credit) || 0), currency: answer.body.currency ?? null, history });
 }
 
 /** Checks `Paygate-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, "<t>.<body>")>`. */

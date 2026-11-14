@@ -4,6 +4,7 @@ import { ConsoleLayout } from "./components/console/ConsoleLayout";
 import { SiteLayout } from "./components/shared/SiteLayout";
 import { AUTH_PATHS } from "./constants/auth";
 import { CONSOLE_PATHS } from "./constants/console";
+import { LEGAL_PATHS } from "./constants/legal";
 import { PRICING_PATH } from "./constants/pricing";
 import { AccountPage } from "./pages/AccountPage";
 import { AdminPage } from "./pages/console/AdminPage";
@@ -14,13 +15,15 @@ import { LedgerPage } from "./pages/console/LedgerPage";
 import { NewIntentPage } from "./pages/console/NewIntentPage";
 import { OverviewPage } from "./pages/console/OverviewPage";
 import { PoliciesPage } from "./pages/console/PoliciesPage";
+import { LegalPage } from "./pages/LegalPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PricingPage } from "./pages/PricingPage";
 import { SignupPage } from "./pages/SignupPage";
 import { WaitlistPage } from "./pages/WaitlistPage";
 
-// "/" is the landing page, with its own header and footer; /pricing, a draft of
-// the plans, borrows them through SiteLayout and is linked from the header. The
+// "/" is the landing page, with its own header and footer; /pricing (linked from
+// the header) and the Terms, Privacy and Refund pages (linked from the footer)
+// borrow them through SiteLayout. The
 // console under /app is a dummy-data preview, reachable by URL only. Both are
 // kept out of search. /login, /signup, /account and /waitlist stand alone,
 // without the header or footer, and sign in with a one-time code: emailed by
@@ -32,7 +35,12 @@ export const router = createBrowserRouter([
   { path: "/", element: <App /> },
   {
     element: <SiteLayout />,
-    children: [{ path: PRICING_PATH, element: <PricingPage /> }],
+    children: [
+      { path: PRICING_PATH, element: <PricingPage /> },
+      { path: LEGAL_PATHS.terms, element: <LegalPage page="terms" /> },
+      { path: LEGAL_PATHS.privacy, element: <LegalPage page="privacy" /> },
+      { path: LEGAL_PATHS.refunds, element: <LegalPage page="refunds" /> },
+    ],
   },
   { path: AUTH_PATHS.login, element: <LoginPage /> },
   { path: AUTH_PATHS.signup, element: <SignupPage /> },
