@@ -197,6 +197,12 @@ export async function verifyCode(request: Request, env: Env, now: number) {
 
 /** The account the session cookie belongs to, or null. */
 export async function sessionUser(request: Request, env: Env, now: number) {
+  const account = await sessionAccount(request, env, now);
+  return account && account.user;
+}
+
+/** The session's account with its id, for calls that need to name it to another service. */
+export async function sessionAccount(request: Request, env: Env, now: number) {
   const token = readSessionCookie(request);
   if (!token || !isToken(token)) return null;
   const row = await env.DB.prepare(
@@ -205,7 +211,7 @@ export async function sessionUser(request: Request, env: Env, now: number) {
   )
     .bind(await tokenHash(token), now)
     .first<UserRow>();
-  return row ? publicUser(row, env) : null;
+  return row ? { id: row.id, user: publicUser(row, env) } : null;
 }
 
 export async function currentSession(request: Request, env: Env, now: number) {
@@ -227,5 +233,7 @@ export async function sweep(db: D1Database, now: number) {
     db.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(now),
     // The longest window is a day, so one that started a day ago has ended.
     db.prepare("DELETE FROM rate_limits WHERE window_start <= ?").bind(now - DAY),
+    // Paygate stops retrying a webhook after 3 days, so a week covers any repeat.
+    db.prepare("DELETE FROM billing_events WHERE received_at <= ?").bind(now - 7 * DAY),
   ]);
 }

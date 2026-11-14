@@ -1,4 +1,4 @@
-/** What the Worker is given: its database, three secrets and three settings. */
+/** What the Worker is given: its database, its secrets and its settings. */
 export interface Env {
   DB: D1Database;
   /** Secret. A Resend API key that can send from MAIL_FROM's domain. */
@@ -23,4 +23,13 @@ export interface Env {
    * else): a new account waits until an admin approves it.
    */
   SIGNUP_MODE: string;
+  /** Where Paygate's app API is, e.g. "https://pay.erpai.studio". */
+  PAYGATE_URL: string;
+  /**
+   * Secret. The floodwall app's Paygate secret key. Its prefix picks the
+   * mode: pg_sk_test_… on preview, pg_sk_live_… once billing is live.
+   */
+  PAYGATE_SECRET_KEY?: string;
+  /** Secret. Signs the webhooks Paygate sends to POST /billing/webhook. */
+  PAYGATE_WEBHOOK_SECRET?: string;
 }
