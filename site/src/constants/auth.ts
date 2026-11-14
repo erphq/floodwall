@@ -30,8 +30,8 @@ export const SESSION_TTL_MS = 30 * 24 * 60 * 60_000;
 /** As the service allows (api/src/rules.ts). */
 export const NAME_MAX_LENGTH = 80;
 
-/** Creating an account opens the console; signing in opens the account page. */
-export const DEFAULT_NEXT = { signup: CONSOLE_PATHS.overview, login: AUTH_PATHS.account } as const;
+/** Creating an account or signing in opens the console. */
+export const DEFAULT_NEXT = { signup: CONSOLE_PATHS.overview, login: CONSOLE_PATHS.overview } as const;
 
 export const AUTH_COPY = {
   login: {
@@ -75,7 +75,7 @@ export const AUTH_COPY = {
     lead: "Your account connects your sign-in to the console.",
     signedInAs: "Signed in as",
     nameLabel: "Name",
-    nameHint: "Shown in the site's header in place of your address. Leave it empty to show the address.",
+    nameHint: "Shown in the console and the site's header in place of your address. Leave it empty to show the address.",
     saveName: "Save name",
     savingName: "Saving…",
     nameSaved: "Saved your name.",
@@ -98,12 +98,13 @@ export const AUTH_COPY = {
   /** The account slot in the header of the landing page and /pricing. */
   header: {
     signIn: "Sign in",
+    getStarted: "Get started",
     /** The account button's name: it shows only the initials and, on wide screens, the name or address. */
     menu: (email: string, name: string | null) =>
       name ? `Your account, ${name}, signed in as ${email}` : `Your account, signed in as ${email}`,
     signedInAs: "Signed in as",
-    account: "Account",
-    console: "Console",
+    account: "Settings and billing",
+    console: "Open console",
     waitlist: "Waitlist",
     signOut: "Sign out",
     signingOut: "Signing out…",

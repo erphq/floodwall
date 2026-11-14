@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  billingAvailable,
+  changePlan,
   codeFromPage,
   getCredits,
   getPlan,
   lookupCode,
   openBilling,
+  previewPlanChange,
   saveCode,
   startCheckout,
 } from "../helpers/billing";
 import type { BillingInterval, PaidPlanKey } from "../constants/pricing";
-import type { AccountCredit, AccountPlan, DiscountCode } from "../types/billing";
+import type { AccountCredit, AccountPlan, DiscountCode, PlanChangePreview } from "../types/billing";
 
 /**
  * The signed-in account's plan and credit, a discount code to take off at checkout, and the two
@@ -25,6 +26,8 @@ export function useBilling(enabled: boolean, { refreshFirst = false } = {}) {
   const [checkingCode, setCheckingCode] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  // A switch to another paid plan waits here, with its price, until it is confirmed or dropped.
+  const [pending, setPending] = useState<PlanChangePreview | null>(null);
 
   const load = useCallback(async (refresh: boolean) => {
     setError("");
@@ -57,7 +60,7 @@ export function useBilling(enabled: boolean, { refreshFirst = false } = {}) {
   }, []);
 
   useEffect(() => {
-    if (!enabled || !billingAvailable) return;
+    if (!enabled) return;
     void load(refreshFirst);
     // Credit is a nicety beside the plan: if it can't be read, the card just doesn't show it.
     getCredits().then(setCredit, () => setCredit(null));
@@ -96,5 +99,35 @@ export function useBilling(enabled: boolean, { refreshFirst = false } = {}) {
       // The code stays saved until the payment comes back (BillingCard), so leaving checkout keeps it.
       run(`${key}:${interval}`, () => startCheckout(key, interval, code?.code)),
     manage: () => run("manage", openBilling),
+    pending,
+    /** Asks what moving to `key` would charge, and holds it for confirming. */
+    previewSwitch: async (key: PaidPlanKey) => {
+      setBusy(`preview:${key}`);
+      setError("");
+      try {
+        setPending(await previewPlanChange(key));
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setBusy(null);
+      }
+    },
+    /** Makes the pending switch. Resolves true once the new plan is in place. */
+    confirmSwitch: async () => {
+      if (!pending) return false;
+      setBusy(`switch:${pending.plan}`);
+      setError("");
+      try {
+        setPlan(await changePlan(pending.plan as PaidPlanKey));
+        setPending(null);
+        return true;
+      } catch (e) {
+        setError((e as Error).message);
+        return false;
+      } finally {
+        setBusy(null);
+      }
+    },
+    cancelSwitch: () => setPending(null),
   };
 }

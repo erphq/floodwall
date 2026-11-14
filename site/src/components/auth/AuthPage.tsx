@@ -15,7 +15,12 @@ export function AuthPage({ kicker, title, lead, children }: AuthPageProps) {
     <main className="min-h-svh bg-paper">
       <div className={cx(pageWidth, "max-w-140 py-section mobile:py-8")}>
         <meta name="robots" content="noindex, nofollow" />
-        <LogoLink className="mb-8 mobile:mb-6">Floodwall</LogoLink>
+        <div className="mb-8 flex items-center justify-between gap-4 mobile:mb-6">
+          <LogoLink>Floodwall</LogoLink>
+          <a className="text-sm text-muted underline-offset-4 hover:text-ink hover:underline" href="/">
+            Back to floodwall.ai
+          </a>
+        </div>
         <section className="border border-line bg-surface" aria-labelledby="auth-title">
           <header className="border-b border-b-line">
             {kicker && (

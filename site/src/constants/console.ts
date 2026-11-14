@@ -14,6 +14,7 @@ export const CONSOLE_PATHS = {
   ledger: "/app/ledger",
   policies: "/app/policies",
   admin: "/app/admin",
+  settings: "/app/settings",
 } as const;
 
 export const CONSOLE_NAV = [

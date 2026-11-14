@@ -4,7 +4,7 @@ import { ConsoleIntentSteps } from "../../components/console/ConsoleIntentSteps"
 import { ConsolePageHeader } from "../../components/console/ConsolePageHeader";
 import { ConsolePanel } from "../../components/console/ConsolePanel";
 import { CONSOLE_PATHS } from "../../constants/console";
-import { describeAction } from "../../helpers/gate";
+import { deferral, describeAction } from "../../helpers/gate";
 import { usePlane } from "../../hooks/usePlane";
 import { consoleGrow, consoleLink, consoleList, consoleMono, consoleRow, consoleSub } from "../../styles/classes";
 
@@ -16,7 +16,7 @@ export function HoldPage() {
     <>
       <ConsolePageHeader
         title="Hold queue"
-        description="Deferred intents wait here. Releasing waives their deferrals; rejections still apply."
+        description="Intents a policy deferred wait here for a person to decide. Nothing on hold reaches production."
       />
 
       <ConsolePanel title={`${held.length} on hold`} flush>
@@ -33,21 +33,52 @@ export function HoldPage() {
           </ConsoleEmpty>
         ) : (
           <ul className={consoleList}>
-            {held.map((intent) => (
-              <li key={intent.id} className={`${consoleRow} flex-wrap`}>
-                <span className={consoleGrow}>
-                  <Link className={consoleLink} to={CONSOLE_PATHS.intent(intent.id)}>
-                    <span className={consoleMono}>#{intent.id}</span> {describeAction(intent.action)}
-                  </Link>
-                  <span className={consoleSub}>
-                    {intent.agent} · {intent.verdicts?.find((v) => v.verdict === "defer")?.reason ?? "deferred"}
+            {held.map((intent) => {
+              const deferred = deferral(intent);
+              return (
+                <li key={intent.id} className={`${consoleRow} flex-wrap`}>
+                  <span className={`${consoleGrow} min-w-60`}>
+                    <Link className={consoleLink} to={CONSOLE_PATHS.intent(intent.id)}>
+                      <span className={consoleMono}>#{intent.id}</span> {describeAction(intent.action)}
+                    </Link>
+                    <span className={consoleSub}>
+                      {deferred ? (
+                        <>
+                          Deferred by <code className="text-ink">{deferred.policy}</code>: {deferred.reason}
+                        </>
+                      ) : (
+                        "Deferred"
+                      )}
+                    </span>
+                    <span className={consoleSub}>
+                      {intent.agent} · {intent.priority} priority · {intent.blast} blast radius · submitted at tick{" "}
+                      {intent.submittedAt}
+                    </span>
                   </span>
-                </span>
-                <ConsoleIntentSteps intent={intent} />
-              </li>
-            ))}
+                  <ConsoleIntentSteps intent={intent} />
+                </li>
+              );
+            })}
           </ul>
         )}
+      </ConsolePanel>
+
+      <ConsolePanel title="Release or expire">
+        <dl className="grid gap-4 text-sm leading-normal sm:grid-cols-2">
+          <div className="grid gap-1">
+            <dt className="font-medium text-ink">Release</dt>
+            <dd className="text-muted">
+              Waives the intent's deferrals and sends it back through the gate on the next tick (in this demo, straight
+              away). It is admitted unless a policy rejects it; rejections still apply.
+            </dd>
+          </div>
+          <div className="grid gap-1">
+            <dt className="font-medium text-ink">Expire</dt>
+            <dd className="text-muted">
+              Drops the intent without running it and records the expiry on the ledger, with who expired it.
+            </dd>
+          </div>
+        </dl>
       </ConsolePanel>
     </>
   );

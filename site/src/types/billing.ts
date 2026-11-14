@@ -9,6 +9,16 @@ export type AccountPlan = {
   /** When the period ends, in ms since the epoch. */
   periodEnd: number | null;
   cancelAtPeriodEnd: boolean;
+  /** "month" or "year", when known (the demo knows; the service doesn't say yet). */
+  interval?: "month" | "year";
+};
+
+/** What moving to another paid plan would charge now (POST /billing/change with preview). */
+export type PlanChangePreview = {
+  plan: string;
+  /** In cents: the prorated difference for the rest of the period. 0 when moving down. */
+  amountDue: number;
+  currency: string | null;
 };
 
 /** A discount code the service checked with Paygate (GET /billing/promo). */
