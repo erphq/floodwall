@@ -44,7 +44,7 @@ function NavItemBox({ index, registerItem, label }: { index: number; registerIte
 
 /**
  * The sticky header on the landing page and /pricing: the logo (which goes home), a "How it works"
- * menu over the sections that explain the wall, then Roadmap, Pricing and Waitlist, and at the
+ * menu over the sections that explain the wall, then Roadmap, Pricing and Sign up, and at the
  * right the account (Sign in, or who is signed in: HeaderAccount) and the GitHub button. One hover
  * highlight glides between the top-level items, and another between the panel's sections. On the
  * landing page the current item follows the section in view; /pricing (`onLanding` false) is the

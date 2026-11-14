@@ -46,10 +46,10 @@ export function PricingHero() {
             charge for each thousand more.
           </p>
           <div className="pricing-actions">
-            <p className="pricing-note">Hosted plans by invitation during early access</p>
+            <p className="pricing-note">Start on Free. Upgrade when you need more</p>
             <div className="pricing-buttons">
               <a className="button button-lg" href={EARLY_ACCESS_URL}>
-                Request early access <Icon icon={ArrowRight02Icon} className="button-arrow" />
+                Get started free <Icon icon={ArrowRight02Icon} className="button-arrow" />
               </a>
               <a className="hero-link" href={REPO_URL}>
                 <Icon icon={GithubIcon} /> View the Crate <Icon icon={ArrowRight02Icon} />
