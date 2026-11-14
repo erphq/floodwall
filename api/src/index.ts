@@ -2,6 +2,7 @@
 // and sweeps expired rows on its daily schedule.
 
 import { approveUser, listUsers, removeUser } from "./admin";
+import { currentPlan, manageBilling, receiveWebhook, startCheckout } from "./billing";
 import { currentSession, sendCode, signOut, sweep, verifyCode } from "./auth";
 import type { Env } from "./env";
 import { allowedOrigin, HttpError, json, preflight, withCors } from "./http";
@@ -10,6 +11,8 @@ import { MESSAGES } from "./rules";
 async function route(request: Request, env: Env, origin: string | null) {
   const now = Date.now();
   const { pathname } = new URL(request.url);
+  // Paygate's webhooks come from its server, not a site: their signature is the check.
+  if (request.method === "POST" && pathname === "/billing/webhook") return receiveWebhook(request, env, now);
   // Only the site's own pages may change anything: a POST from any other
   // origin, or with none, is refused before it is read.
   if (request.method === "POST" && !origin) throw new HttpError(403, MESSAGES.foreignOrigin);
@@ -29,6 +32,12 @@ async function route(request: Request, env: Env, origin: string | null) {
       return approveUser(request, env, now, origin!);
     case "POST /admin/remove":
       return removeUser(request, env, now);
+    case "GET /billing":
+      return currentPlan(request, env, now);
+    case "POST /billing/checkout":
+      return startCheckout(request, env, now, origin!);
+    case "POST /billing/manage":
+      return manageBilling(request, env, now);
   }
   throw new HttpError(404, MESSAGES.notFound);
 }
@@ -44,7 +53,7 @@ export default {
       if (error instanceof HttpError) {
         response = json({ error: error.message }, error.status, error.headers);
       } else {
-        console.error("sign-in failed", error);
+        console.error("request failed", error);
         response = json({ error: MESSAGES.broken }, 500);
       }
     }

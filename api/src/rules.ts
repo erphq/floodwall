@@ -46,5 +46,10 @@ export const MESSAGES = {
   noSuchUser: "There is no account for that address.",
   adminStays: "Admins can't be removed here. Take the address out of ADMIN_EMAILS first.",
   notFound: "Not found.",
+  waiting: "Your account is still on the waitlist.",
+  badPlan: "Choose the Team or Business plan, billed monthly or yearly.",
+  billingUnavailable: "Billing is not available right now. Please try again later.",
+  alreadySubscribed: "You already have a plan. Manage it from Billing on your account page.",
+  noBilling: "You have no billing history yet. Choose a plan first.",
   broken: "Something went wrong. Please try again.",
 };

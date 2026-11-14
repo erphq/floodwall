@@ -64,6 +64,22 @@ export function approvedEmail(consoleUrl: string): Email {
   };
 }
 
+/** The email when a renewal or upgrade can't be charged. `accountUrl` is /account on the site. */
+export function paymentFailedEmail(accountUrl: string): Email {
+  const lines = {
+    lead: "We couldn't take the payment for your Floodwall plan. Your card will be tried again over the next few days, and your plan stays on meanwhile.",
+    open: "Update your card",
+    help: "Open Billing on your account page to update the card or change your plan.",
+  };
+  return {
+    subject: "Your Floodwall payment didn't go through",
+    text: `${lines.lead}\n\n${lines.open}: ${accountUrl}\n\n${lines.help}\n`,
+    html: page(`<p style="${STYLE.text}">${lines.lead}</p>
+<a style="${STYLE.button}" href="${accountUrl}">${lines.open}</a>
+<p style="${STYLE.small}">${lines.help}</p>`),
+  };
+}
+
 /** Sends `email` to `to`, or throws a 502 the reader can retry after. */
 export async function sendEmail(env: Env, to: string, email: Email) {
   let response: Response;

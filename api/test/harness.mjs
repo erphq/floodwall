@@ -1,6 +1,6 @@
 // Runs the built Worker (dist/index.js, from `npm run build`) in Miniflare,
-// with an empty D1 database and a stand-in for Resend that keeps every email
-// it is sent.
+// with an empty D1 database, a stand-in for Resend that keeps every email
+// it is sent, and a stand-in for Paygate that a test can answer for.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -15,6 +15,9 @@ export const API = "https://api.floodwall.ai";
 export const SITE = "https://preview.floodwall.ai";
 export const SECRET = "test-secret-that-is-at-least-32-characters";
 export const KEY = "re_test_key";
+export const PAYGATE = "https://pay.erpai.studio";
+export const PAYGATE_KEY = "pg_sk_test_floodwall";
+export const PAYGATE_WEBHOOK_SECRET = "whsec_test_floodwall";
 
 /**
  * The service counts requests in fixed windows on the real clock (limits.ts). A test that makes
@@ -26,9 +29,13 @@ export async function clearOfWindowEnd(windowMs, marginMs = 30_000) {
   if (left < marginMs) await new Promise((resolve) => setTimeout(resolve, left + 1_000));
 }
 
-/** Starts the Worker. `resend(request)` can stand in for Resend's answer. */
-export async function start({ bindings = {}, resend } = {}) {
+/**
+ * Starts the Worker. `resend(request)` can stand in for Resend's answer, and `paygate(call)` answers
+ * every call to Paygate (`{ method, path, headers, body }`); each call is also kept in `paygateCalls`.
+ */
+export async function start({ bindings = {}, resend, paygate } = {}) {
   const outbox = [];
+  const paygateCalls = [];
   // Wrangler's Miniflare 5 still reads the familiar version 4 options.
   const mf = new Miniflare(
     convertV4MiniflareOptions({
@@ -39,8 +46,26 @@ export async function start({ bindings = {}, resend } = {}) {
       scriptPath: path.join(root, "dist/index.js"),
       compatibilityDate: config.compatibility_date,
       d1Databases: { DB: "floodwall-auth-test" },
-      bindings: { ...config.vars, RESEND_API_KEY: KEY, AUTH_SECRET: SECRET, ...bindings },
+      bindings: {
+        ...config.vars,
+        RESEND_API_KEY: KEY,
+        AUTH_SECRET: SECRET,
+        PAYGATE_SECRET_KEY: PAYGATE_KEY,
+        PAYGATE_WEBHOOK_SECRET,
+        ...bindings,
+      },
       async outboundService(request) {
+        if (request.url.startsWith(`${PAYGATE}/`)) {
+          const text = await request.text();
+          const call = {
+            method: request.method,
+            path: new URL(request.url).pathname,
+            headers: Object.fromEntries(request.headers),
+            body: text ? JSON.parse(text) : undefined,
+          };
+          paygateCalls.push(call);
+          return (paygate && (await paygate(call))) || Response.json({ error: { code: "unexpected" } }, { status: 500 });
+        }
         if (request.url !== "https://api.resend.com/emails") return new Response("unexpected fetch", { status: 599 });
         const email = { headers: Object.fromEntries(request.headers), body: await request.json() };
         const answer = resend ? await resend(email) : null;
@@ -59,8 +84,11 @@ export async function start({ bindings = {}, resend } = {}) {
   }
 
   /** A request as the site would send it: JSON, from SITE, from one network. */
-  async function call(pathname, { method = "POST", body, cookie, origin = SITE, ip = "203.0.113.7", base = API } = {}) {
-    const headers = { "CF-Connecting-IP": ip };
+  async function call(
+    pathname,
+    { method = "POST", body, cookie, origin = SITE, ip = "203.0.113.7", base = API, headers: extra = {} } = {},
+  ) {
+    const headers = { "CF-Connecting-IP": ip, ...extra };
     if (origin) headers.Origin = origin;
     if (cookie) headers.Cookie = cookie;
     if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -104,10 +132,11 @@ export async function start({ bindings = {}, resend } = {}) {
 
   async function reset() {
     outbox.length = 0;
-    for (const table of ["sessions", "users", "sign_in_codes", "rate_limits"]) {
+    paygateCalls.length = 0;
+    for (const table of ["sessions", "users", "sign_in_codes", "rate_limits", "billing_events"]) {
       await db.prepare(`DELETE FROM ${table}`).run();
     }
   }
 
-  return { mf, db, outbox, call, lastCode, codeFor, signIn, age, reset, stop: () => mf.dispose() };
+  return { mf, db, outbox, paygateCalls, call, lastCode, codeFor, signIn, age, reset, stop: () => mf.dispose() };
 }

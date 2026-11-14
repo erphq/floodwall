@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { AuthPage } from "../components/auth/AuthPage";
 import { SessionUnavailable } from "../components/auth/SessionUnavailable";
+import { BillingCard } from "../components/billing/BillingCard";
 import { ButtonLink } from "../components/shared/ButtonLink";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
@@ -56,6 +57,7 @@ export function AccountPage() {
           {status}
         </p>
       </Card>
+      {session.status === "signedIn" && <BillingCard />}
     </AuthPage>
   );
 }

@@ -1,13 +1,24 @@
 import { ArrowRight02Icon } from "@hugeicons/core-free-icons";
+import { BILLING_COPY } from "../../constants/billing";
 import type { PricingPlan } from "../../constants/pricing";
 import { Icon } from "../shared/Icon";
+
+/**
+ * What the card's button does for this reader: a link (signed out, or a plan that isn't sold), the
+ * reader's own plan, or checkout for a signed-in account.
+ */
+export type PlanAction =
+  | { kind: "link"; cta?: { label: string; href: string } }
+  | { kind: "current" }
+  | { kind: "buy"; busy: boolean; onBuy: () => void };
 
 /**
  * One plan in the rail: its price, who it's for, what it includes, and how to start. The plan most
  * teams start on is marked in its title band and carries the one filled button.
  */
-export function PricingPlanCard({ plan }: { plan: PricingPlan }) {
-  const { name, price, priceNote, summary, typical, features, cta, featured } = plan;
+export function PricingPlanCard({ plan, action = { kind: "link" } }: { plan: PricingPlan; action?: PlanAction }) {
+  const { name, price, priceNote, summary, typical, features, featured } = plan;
+  const cta = (action.kind === "link" && action.cta) || plan.cta;
 
   return (
     <li className="plan" data-featured={featured || undefined}>
@@ -23,7 +34,7 @@ export function PricingPlanCard({ plan }: { plan: PricingPlan }) {
         <p className="card-copy">{summary}</p>
         {typical && (
           <p className="plan-typical">
-            Typical spend <strong>{typical.spend}/mo</strong> for {typical.basis}
+            <strong>{typical.spend}</strong>, {typical.basis}
           </p>
         )}
       </div>
@@ -33,7 +44,19 @@ export function PricingPlanCard({ plan }: { plan: PricingPlan }) {
         ))}
       </ul>
       <div className="plan-cta">
-        {featured ? (
+        {action.kind === "current" ? (
+          <p className="plan-unit">{BILLING_COPY.current}</p>
+        ) : action.kind === "buy" ? (
+          <button
+            type="button"
+            className={featured ? "button button-lg" : "hero-link"}
+            disabled={action.busy}
+            onClick={action.onBuy}
+          >
+            {action.busy ? BILLING_COPY.opening : BILLING_COPY.upgrade(plan.planKey!)}{" "}
+            <Icon icon={ArrowRight02Icon} className={featured ? "button-arrow" : undefined} />
+          </button>
+        ) : featured ? (
           <a className="button button-lg" href={cta.href}>
             {cta.label} <Icon icon={ArrowRight02Icon} className="button-arrow" />
           </a>
