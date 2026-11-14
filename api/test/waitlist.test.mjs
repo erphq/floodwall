@@ -10,23 +10,26 @@ const session = async (w, cookie) => (await w.call("/auth/session", { method: "G
 const status = async (w, email) =>
   (await w.db.prepare("SELECT status FROM users WHERE email = ?").bind(email).first())?.status;
 
+// The waitlist is off as deployed (wrangler.jsonc), so these turn it on.
+const WAITLIST = { ADMIN_EMAILS: ADMINS, SIGNUP_MODE: "waitlist" };
+
 describe("while sign-up is on the waitlist", () => {
   let w;
   before(async () => {
-    w = await start({ bindings: { ADMIN_EMAILS: ADMINS } });
+    w = await start({ bindings: WAITLIST });
   });
   after(() => w.stop());
   beforeEach(() => w.reset());
 
   test("a new account signs in, but waits", async () => {
     const cookie = await w.signIn("ada@example.com");
-    assert.deepEqual(await session(w, cookie), { email: "ada@example.com", waiting: true, admin: false });
+    assert.deepEqual(await session(w, cookie), { email: "ada@example.com", name: null, waiting: true, admin: false });
     assert.equal(await status(w, "ada@example.com"), "waiting");
   });
 
   test("an admin never waits", async () => {
     const cookie = await w.signIn(GRACE);
-    assert.deepEqual(await session(w, cookie), { email: GRACE, waiting: false, admin: true });
+    assert.deepEqual(await session(w, cookie), { email: GRACE, name: null, waiting: false, admin: true });
     assert.equal(await status(w, GRACE), "approved");
   });
 
@@ -35,7 +38,7 @@ describe("while sign-up is on the waitlist", () => {
       .prepare("INSERT INTO users (id, email, created_at, last_sign_in_at, status) VALUES ('u1', 'ops@example.com', 1, 1, 'waiting')")
       .run();
     const ops = await w.signIn("ops@example.com");
-    assert.deepEqual(await session(w, ops), { email: "ops@example.com", waiting: false, admin: true });
+    assert.deepEqual(await session(w, ops), { email: "ops@example.com", name: null, waiting: false, admin: true });
     await w.signIn("ada@example.com");
     const listed = await w.call("/admin/users", { method: "GET", cookie: ops });
     assert.deepEqual(
@@ -101,7 +104,7 @@ describe("while sign-up is on the waitlist", () => {
     assert.equal(approved.status, 200);
     assert.deepEqual(approved.body, { approved: true, emailed: true });
 
-    assert.deepEqual(await session(w, ada), { email: "ada@example.com", waiting: false, admin: false });
+    assert.deepEqual(await session(w, ada), { email: "ada@example.com", name: null, waiting: false, admin: false });
     const row = await w.db.prepare("SELECT status, approved_at, approved_by FROM users WHERE email = 'ada@example.com'").first();
     assert.equal(row.status, "approved");
     assert.equal(row.approved_by, GRACE);
@@ -146,7 +149,7 @@ describe("while sign-up is on the waitlist", () => {
 
   test("an approval stands when its email can't be sent", async () => {
     const failing = await start({
-      bindings: { ADMIN_EMAILS: ADMINS },
+      bindings: WAITLIST,
       resend: ({ body }) => (body.subject.startsWith("You're in") ? new Response("down", { status: 500 }) : null),
     });
     try {
@@ -212,7 +215,7 @@ describe("the SIGNUP_MODE flag", () => {
       assert.equal((await session(w, old)).waiting, false);
 
       const ada = await w.signIn("ada@example.com");
-      assert.deepEqual(await session(w, ada), { email: "ada@example.com", waiting: false, admin: false });
+      assert.deepEqual(await session(w, ada), { email: "ada@example.com", name: null, waiting: false, admin: false });
       assert.equal(await status(w, "ada@example.com"), "approved");
 
       const admin = await w.signIn(GRACE);
@@ -240,9 +243,9 @@ describe("the SIGNUP_MODE flag", () => {
     }
   });
 
-  test("the deployed setting is the waitlist", async () => {
+  test("the deployed setting is open sign-up", async () => {
     const { readFileSync } = await import("node:fs");
     const config = readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8");
-    assert.match(config, /"SIGNUP_MODE": "waitlist"/);
+    assert.match(config, /"SIGNUP_MODE": "open"/);
   });
 });

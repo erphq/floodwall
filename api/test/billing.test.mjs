@@ -39,7 +39,8 @@ describe("billing through Paygate", () => {
   let w;
   let answer; // what the fake Paygate says next
   before(async () => {
-    w = await start({ bindings: { ADMIN_EMAILS: ADMIN }, paygate: (call) => answer?.(call) });
+    // On the waitlist, so a new non-admin account waits: "signed-out and waiting accounts can't buy".
+    w = await start({ bindings: { ADMIN_EMAILS: ADMIN, SIGNUP_MODE: "waitlist" }, paygate: (call) => answer?.(call) });
   });
   after(() => w.stop());
   beforeEach(async () => {

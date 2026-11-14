@@ -26,6 +26,7 @@ export type PricingPlan = {
   featured?: boolean;
 };
 
+/** Every hosted plan starts as a free account, which can move to a paid plan from /pricing or /account. */
 const GET_STARTED = { label: "Get started", href: AUTH_PATHS.signup };
 
 export const PRICING_PLANS: PricingPlan[] = [
@@ -166,6 +167,6 @@ export const PRICING_FAQ = [
   {
     question: "When can I sign up?",
     answer:
-      "Create a free account now; during the beta, new accounts are let in a few at a time. Once you're in, you can move to Team or Business from this page or your account. Paying a year ahead gets two months free.",
+      "Now: create a free account with your email and open the console. You can move to Team or Business from this page or your account whenever you need to. Paying a year ahead gets two months free.",
   },
 ];
