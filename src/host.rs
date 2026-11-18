@@ -1,6 +1,6 @@
 //! A plane behind a JSON interface, for a host that runs it out of
 //! process: Floodwall Cloud runs it compiled to WebAssembly inside a
-//! Cloudflare Durable Object, one per plane (see `wasm/`).
+//! Cloudflare Durable Object, one per plane.
 //!
 //! [`Host::handle`] takes one request, a JSON object whose `"op"` names
 //! what to do, and returns one JSON object. Every answer has `"ok"`; a

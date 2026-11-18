@@ -26,7 +26,7 @@
 //! # Bounded
 //!
 //! A fleet that mints fresh agent ids must not grow the plane's memory
-//! without limit (see FW-104 in GOALS.md), so per-agent counts are kept for
+//! without limit (FW-104), so per-agent counts are kept for
 //! the first [`AGENT_LIMIT`] agents the plane hears from. What later agents
 //! do is counted in [`Stats::untracked`], and always in [`Stats::total`].
 //!
