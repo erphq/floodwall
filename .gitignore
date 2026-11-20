@@ -9,3 +9,4 @@ npm-debug.log*
 /sdk/python/dist
 /sdk/python/*.egg-info
 /sdk/typescript/*.tgz
+__pycache__/

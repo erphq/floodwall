@@ -22,7 +22,10 @@ you can read and run them before you have a plane.
 ## Running them
 
 They import the clients from this repository (`../typescript/src/index.js`,
-`../python`), so they run from a checkout with no install. In your own project,
+`../python`), so they run from a checkout with no install, except the two built
+on another framework: `agent-sdk-agent.mjs` needs `@anthropic-ai/claude-agent-sdk`
+and `@floodwall/mcp`, and `langgraph-agent.py` needs `langgraph` (the comment at
+the top of each says what to install). In your own project,
 `npm install @floodwall/client` or `pip install floodwall` and import from the
 package instead.
 

@@ -3,20 +3,31 @@
 //
 //   FLOODWALL_KEY=fw_test_... FLOODWALL_PLANE=<plane id> node sdk/examples/deploy-agent.mjs v42
 //
-// It only prints what it would run; swap `apply` for your real deploy.
+// It only prints what it would run; swap `apply` for your real deploy. Without
+// FLOODWALL_KEY it prints the changes it would ask the plane about, and stops.
 
 import { Floodwall, NotAdmitted } from "../typescript/src/index.js";
 
 const image = process.argv[2] ?? "v1";
+const changes = ["web", "api", "billing"].map((service) => ({
+  service,
+  change: { action: { kind: "apply", resource: service, manifest: image }, priority: "normal", blastRadius: "service" },
+}));
+
+if (!process.env.FLOODWALL_KEY) {
+  console.log("FLOODWALL_KEY is not set, so no plane is asked. The changes would be:");
+  for (const { change } of changes) console.log(JSON.stringify(change));
+  process.exit(0);
+}
+
 const fw = new Floodwall({
   apiKey: process.env.FLOODWALL_KEY,
   plane: process.env.FLOODWALL_PLANE,
-  agent: "deploy-agent",
+  agent: process.env.FLOODWALL_AGENT ?? "deploy-agent",
   baseUrl: process.env.FLOODWALL_URL,
 });
 
-for (const service of ["web", "api", "billing"]) {
-  const change = { action: { kind: "apply", resource: service, manifest: image }, priority: "normal", blastRadius: "service" };
+for (const { service, change } of changes) {
   try {
     await fw.guard(change, async () => {
       console.log(`applying ${image} to ${service}`);

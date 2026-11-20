@@ -1,7 +1,10 @@
 """A LangGraph agent whose tool calls go through Floodwall.
 
-    pip install floodwall[langgraph] langchain-anthropic
+    pip install langgraph langchain-anthropic
     FLOODWALL_KEY=fw_live_... FLOODWALL_PLANE=pl_... python3 sdk/examples/langgraph-agent.py [--apply]
+
+The client comes from this checkout (sdk/python). In your own project:
+pip install floodwall[langgraph] langchain-anthropic, and drop the sys.path line.
 
 Two ways to guard a change, both in `floodwall.langgraph`:
 
@@ -17,10 +20,12 @@ is skipped. The model part needs ANTHROPIC_API_KEY.
 import os
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any, Dict, TypedDict
 
-from floodwall import Floodwall
-from floodwall.langgraph import guard_node, guarded_tool
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "python"))
+from floodwall import Floodwall  # noqa: E402
+from floodwall.langgraph import guard_node, guarded_tool  # noqa: E402
 
 APPLY = "--apply" in sys.argv
 
@@ -45,7 +50,12 @@ def main():
     if not os.environ.get("FLOODWALL_KEY"):
         print("set FLOODWALL_KEY and FLOODWALL_PLANE to ask a plane")
         return
-    fw = Floodwall(api_key=os.environ["FLOODWALL_KEY"], plane=os.environ["FLOODWALL_PLANE"], agent="langgraph-agent")
+    fw = Floodwall(
+        api_key=os.environ["FLOODWALL_KEY"],
+        plane=os.environ["FLOODWALL_PLANE"],
+        agent=os.environ.get("FLOODWALL_AGENT", "langgraph-agent"),
+        base_url=os.environ.get("FLOODWALL_URL", "https://api.floodwall.ai"),
+    )
 
     # 1. A guarded tool, for an agent that picks its own tools.
     scale = guarded_tool(

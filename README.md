@@ -284,8 +284,8 @@ The ledger exports as [JSON Lines](src/export.rs): a header, then every record a
 ```text
 $ cargo run --release -- --export audit/      # the demo writes ledger.jsonl, ledger-suffix.jsonl and keys.json
 $ node tools/verify-ledger.mjs audit/ledger.jsonl audit/keys.json
-ok: 2989 records from genesis; 12 checkpoints; head d68d4329…
-ok: 2989 agent signatures and every checkpoint signature verified
+ok: 2979 records from genesis; 12 checkpoints; head 3dfb8d83…
+ok: 2979 agent signatures and every checkpoint signature verified
 ok: every record is covered by a checkpoint signed by the plane
 ```
 
