@@ -318,7 +318,11 @@ export function redactedContext(text) {
 
 // --- state: which intent belongs to which tool call ---
 
-/** The private directory for saved intent keys; throws unless it is a real 0700 directory we own. */
+/**
+ * The private directory for saved intent keys; throws unless it is a real 0700 directory we own.
+ * Windows has no POSIX modes (a directory always reads as 0666, or 0444 read-only), so there the
+ * mode is not checked: the default, in the user's own temp directory, is private by its ACL.
+ */
 export function stateDir(env) {
   const runtime = env.XDG_RUNTIME_DIR;
   const dir =
@@ -328,7 +332,7 @@ export function stateDir(env) {
   const stat = lstatSync(dir);
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`state directory ${dir} is not a plain directory`);
   if (process.getuid && stat.uid !== process.getuid()) throw new Error(`state directory ${dir} is not owned by this user`);
-  if ((stat.mode & 0o777) !== 0o700) throw new Error(`state directory ${dir} must have mode 0700`);
+  if (process.platform !== "win32" && (stat.mode & 0o777) !== 0o700) throw new Error(`state directory ${dir} must have mode 0700`);
   return dir;
 }
 

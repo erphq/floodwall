@@ -51,6 +51,22 @@ jobs:
           node tools/verify-ledger.mjs target/export-fixture/durable.jsonl target/export-fixture/keys.json
           cmp target/export-fixture/edge.jsonl target/export-fixture/durable.jsonl
           node --test tools/verify-ledger.test.mjs
+  # The hooks run on developers' own machines, Windows among them: the Node
+  # SDKs' tests there too (the state directory has no POSIX modes on Windows).
+  sdk-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: typescript client
+        run: npm --prefix sdk/typescript test
+      - name: mcp server and agent hooks
+        working-directory: sdk/mcp
+        run: npm install --ignore-scripts --no-package-lock --no-save ../typescript && npm test
   sdk:
     runs-on: ubuntu-latest
     steps:

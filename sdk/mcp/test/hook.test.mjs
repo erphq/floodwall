@@ -399,7 +399,7 @@ test("the hook sends manifest context to the plane only when FLOODWALL_HOOK_CONT
   }
 });
 
-test("a state directory that is not private is refused, and nothing is sent", async () => {
+test("a state directory that is not private is refused, and nothing is sent", { skip: process.platform === "win32" && "Windows has no POSIX modes" }, async () => {
   const { plane, env, state } = await setup();
   try {
     chmodSync(state, 0o755);

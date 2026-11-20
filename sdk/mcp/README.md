@@ -122,7 +122,8 @@ worst case.
 Saved intent keys live in a private directory (`$XDG_RUNTIME_DIR/floodwall-hook`,
 else the temp directory) that must be a real directory owned by you with mode
 0700, or the hook blocks; files are created exclusively and without following
-links. The hook script fails closed: a crash, bad input or a missing module exits 2.
+links. Windows has no file modes, so there the mode isn't checked: the default,
+in your own temp directory, is already private to you. The hook script fails closed: a crash, bad input or a missing module exits 2.
 
 The command text (up to 500 characters) goes to the plane as the intent's
 manifest, so keep secrets out of command lines.

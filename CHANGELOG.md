@@ -46,6 +46,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   or expired. Ids refused at the door (rate limit, backpressure) may be
   sent again.
 
+### Fixed
+
+- **`@floodwall/mcp`: the Claude Code and Agent SDK hooks work on Windows.**
+  They refused any directory without POSIX mode 0700 for their saved intent
+  keys, which Windows cannot report, so every guarded command was blocked
+  ("state directory … must have mode 0700"), admitted or not. On Windows the
+  mode is no longer checked; the default directory is in the user's own temp
+  directory. 0.1.0 has the bug: publish a release with this fix.
+
 ### Security
 
 - One agent's deferrals can no longer evict other agents' held intents. A
